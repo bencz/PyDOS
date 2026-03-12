@@ -2,8 +2,9 @@
 
 <p align="center">
   <img width="1536" height="1024" alt="PyDOS - Python for DOS"
-  src="https://github.com/user-attachments/assets/7615805c-a738-46a6-b9d2-0b080bcf51e0" />
+  src="https://github.com/user-attachments/assets/e97afe93-6b30-46e3-8774-18a51ec373e5" />
 </p>
+
 
 **PyDOS compiles Python 3.12 into standalone DOS executables.**
 
@@ -20,8 +21,8 @@ Two target architectures are supported from the same source with no code changes
 
 | Code | Execution |
 |------|-----------|
-| <img src="https://github.com/user-attachments/assets/1d194845-286e-4faa-83de-db014f7d19f5" width="100%"/> | <img src="https://github.com/user-attachments/assets/a350a5ce-3b95-4102-81a2-01a95cc8a19d" width="100%"/> |
-| <img width="737" height="409" alt="image" src="https://github.com/user-attachments/assets/a68f95bd-c6f8-443c-8f81-f65d54de349e" /> | <img width="740" height="404" alt="image" src="https://github.com/user-attachments/assets/9f430e1b-7732-4ba3-9ee1-40d9f3b9d10d" /> |
+| <img src="https://github.com/user-attachments/assets/1d9b54af-98ac-473a-ac09-883d4a0dfbad" width="100%"/> | <img src="https://github.com/user-attachments/assets/11cd6398-726e-4b92-96d8-126c1a6ef94a" width="100%"/> |
+| <img width="737" height="409" alt="image" src="https://github.com/user-attachments/assets/77200dd0-93f6-47b8-af55-1baa927fb20f" /> | <img width="740" height="404" alt="image" src="https://github.com/user-attachments/assets/8bca1f60-35e9-429d-a889-d7e2cd8eadf0" /> |
 
 ## Language Features
 
