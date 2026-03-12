@@ -1,0 +1,16 @@
+=== Sort by key asc ===
+a 1
+b 2
+c 3
+=== Sort by key desc ===
+c 3
+b 2
+a 1
+=== Sort by value asc ===
+apple 10
+cherry 20
+banana 30
+=== Sort by value desc ===
+banana 30
+cherry 20
+apple 10

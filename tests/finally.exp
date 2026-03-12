@@ -1,0 +1,31 @@
+t1 try
+t1 finally
+t2 caught
+t2 finally
+t3 outer try
+t3 inner caught
+t3 inner finally
+t3 after inner
+t3 outer finally
+t4 outer try
+t4 inner finally
+t4 outer caught
+t4 outer finally
+t5 inner caught
+t5 inner finally
+t5 outer caught
+t5 outer finally
+t6 L3 finally
+t6 L2 caught
+t6 L2 finally
+t6 L1 finally
+t7 handler start
+t7 inner finally
+t7 outer caught second
+t7 outer finally
+111
+t9 KeyError
+t9 finally
+t10 bare caught
+t10 finally
+all finally tests done

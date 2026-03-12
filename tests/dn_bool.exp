@@ -1,0 +1,4 @@
+Maybe(42)
+Maybe(0)
+a is truthy
+b is falsy

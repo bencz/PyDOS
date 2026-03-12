@@ -1,0 +1,38 @@
+# Object files (DOS and macOS)
+*.OBJ
+*.obj
+*.o
+
+# Executables and libraries
+*.EXE
+*.exe
+*.LIB
+*.lib
+
+# Linker maps and error logs
+*.MAP
+*.map
+*.ERR
+*.err
+*.LOG
+*.log
+
+# macOS build output
+build/
+
+# Binary output directories (contents only — dirs may be needed)
+bin/
+bin/pydos
+bin/*.EXE
+bin/*.exe
+lib/
+
+# Intermediate assembly and test output
+*.asm
+*.ASM
+tests/*.out
+tests/*.OUT
+
+# OS metadata
+.DS_Store
+Thumbs.db

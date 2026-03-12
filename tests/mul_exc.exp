@@ -1,0 +1,5 @@
+caught ZeroDivisionError
+caught ValueError
+caught RuntimeError
+caught via Exception
+all multi-except tests done

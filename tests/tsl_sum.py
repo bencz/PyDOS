@@ -1,0 +1,6 @@
+# Test sum() builtin (Python-backed via stdlib PIR)
+print(sum([1, 2, 3]))
+print(sum([10, 20, 30]))
+print(sum([]))
+print(sum([42]))
+print(sum([-1, 0, 1]))

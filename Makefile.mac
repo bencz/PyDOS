@@ -1,0 +1,180 @@
+# PyDOS Makefile for macOS (debug build)
+# Usage: make -f Makefile.mac [all|compiler|runtime|clean]
+#
+# compiler: builds bin/pydos (native macOS binary for debugging)
+# runtime:  compiles runtime .c files (validation only, no link)
+
+CXX      = clang++
+CC       = clang
+CXXFLAGS = -std=c++98 -g -O0 -Wall -Wno-switch
+CFLAGS   = -std=c89 -g -O0 -Wall -include compat/dos.h -Icompat -Wno-unused-function -Wno-unused-variable
+
+OBJDIR = build
+BINDIR = bin
+
+# ---- Compiler sources ----
+COMP_SRCS = compiler/main.cpp \
+            compiler/lexer.cpp \
+            compiler/ast.cpp \
+            compiler/parser.cpp \
+            compiler/types.cpp \
+            compiler/sema.cpp \
+            compiler/mono.cpp \
+            compiler/ir.cpp \
+            compiler/iropt.cpp \
+            compiler/codegen.cpp \
+            compiler/cg8086.cpp \
+            compiler/cg386.cpp \
+            compiler/regalloc.cpp \
+            compiler/error.cpp \
+            compiler/pir.cpp \
+            compiler/pirbld.cpp \
+            compiler/pirprt.cpp \
+            compiler/pirlwr.cpp \
+            compiler/pirdom.cpp \
+            compiler/pirutil.cpp \
+            compiler/piropt.cpp \
+            compiler/pirtyp.cpp \
+            compiler/piresc.cpp \
+            compiler/pirspc.cpp \
+            compiler/modscan.cpp \
+            compiler/stdscan.cpp \
+            compiler/pirsrlz.cpp \
+            compiler/pirmrg.cpp \
+            compiler/stdbld.cpp
+
+COMP_OBJS = $(patsubst compiler/%.cpp,$(OBJDIR)/%.o,$(COMP_SRCS))
+
+# ---- Runtime sources ----
+RT_SRCS = runtime/pdos_obj.c \
+          runtime/pdos_mem.c \
+          runtime/pdos_gc.c \
+          runtime/pdos_io.c \
+          runtime/pdos_str.c \
+          runtime/pdos_int.c \
+          runtime/pdos_blt.c \
+          runtime/pdos_exc.c \
+          runtime/pdos_vtb.c \
+          runtime/pdos_lst.c \
+          runtime/pdos_dic.c \
+          runtime/pdos_itn.c \
+          runtime/pdos_gen.c \
+          runtime/pdos_rt.c \
+          runtime/pdos_sjn.c \
+          runtime/pdos_arn.c \
+          runtime/pdos_cll.c \
+          runtime/pdos_asn.c \
+          runtime/pdos_exg.c \
+          runtime/pdos_fzs.c \
+          runtime/pdos_cpx.c \
+          runtime/pdos_bya.c
+
+RT_OBJS = $(patsubst runtime/%.c,$(OBJDIR)/%.o,$(RT_SRCS))
+
+TESTOBJDIR = build/test
+
+# ---- Test sources ----
+TEST_SRCS = rttests/main.c \
+            rttests/t_obj.c \
+            rttests/t_mem.c \
+            rttests/t_str.c \
+            rttests/t_gc.c \
+            rttests/t_int.c \
+            rttests/t_lst.c \
+            rttests/t_exc.c \
+            rttests/t_io.c \
+            rttests/t_gen.c \
+            rttests/t_rt.c \
+            rttests/t_vtb.c \
+            rttests/t_itn.c \
+            rttests/t_dic.c \
+            rttests/t_blt.c \
+            rttests/t_e2e.c \
+            rttests/t_gcs.c \
+            rttests/t_func.c \
+            rttests/t_sjn.c \
+            rttests/t_arn.c \
+            rttests/t_set.c \
+            rttests/t_cll.c \
+            rttests/t_asn.c \
+            rttests/t_unp.c \
+            rttests/t_fzs.c \
+            rttests/t_cpx.c \
+            rttests/t_bya.c \
+            rttests/t_excg.c
+
+TEST_OBJS = $(patsubst rttests/%.c,$(TESTOBJDIR)/%.o,$(TEST_SRCS))
+
+# ---- Targets ----
+all: compiler runtime
+
+compiler: $(BINDIR)/pydos $(BINDIR)/stdlib.idx
+
+runtime: $(RT_OBJS)
+	@echo "=== Runtime: all files compiled OK (validation only) ==="
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(BINDIR):
+	mkdir -p $(BINDIR)
+
+$(OBJDIR)/%.o: compiler/%.cpp | $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJDIR)/%.o: runtime/%.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BINDIR)/pydos: $(COMP_OBJS) | $(BINDIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(COMP_OBJS)
+
+$(TESTOBJDIR):
+	mkdir -p $(TESTOBJDIR)
+
+$(TESTOBJDIR)/%.o: rttests/%.c | $(TESTOBJDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BINDIR)/rttest: $(TEST_OBJS) $(RT_OBJS) | $(BINDIR)
+	$(CC) $(CFLAGS) -o $@ $(TEST_OBJS) $(RT_OBJS)
+
+test: $(BINDIR)/rttest
+	./$(BINDIR)/rttest
+
+# ---- Stdlibgen tool ----
+STDGEN_SRCS = compiler/stdgen.cpp
+STDGEN_OBJS = $(OBJDIR)/stdgen.o
+
+STUB_FILES = stdlib/builtins/funcs.py \
+             stdlib/builtins/str.py \
+             stdlib/builtins/list.py \
+             stdlib/builtins/dict.py \
+             stdlib/builtins/set.py \
+             stdlib/builtins/int.py \
+             stdlib/builtins/tuple.py \
+             stdlib/builtins/frozenst.py \
+             stdlib/builtins/complex.py \
+             stdlib/builtins/bytearr.py \
+             stdlib/builtins/pyfncs.py \
+             stdlib/_internal.py
+
+# Legacy stdgen (kept temporarily for compatibility)
+$(OBJDIR)/stdgen.o: compiler/stdgen.cpp compiler/stdscan.h | $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BINDIR)/stdgen: $(STDGEN_OBJS) | $(BINDIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(STDGEN_OBJS)
+
+stdgen: $(BINDIR)/stdgen
+
+$(BINDIR)/stdlib.idx: $(BINDIR)/pydos $(STUB_FILES)
+	./$(BINDIR)/pydos --build-stdlib stdlib -o $(BINDIR)/stdlib.idx
+
+clean:
+	rm -rf $(OBJDIR)
+	rm -rf $(TESTOBJDIR)
+	rm -f $(BINDIR)/pydos
+	rm -f $(BINDIR)/rttest
+	rm -f $(BINDIR)/stdgen
+	rm -f $(BINDIR)/stdlib.idx
+
+.PHONY: all compiler runtime test clean stdgen

@@ -1,0 +1,8 @@
+enter A
+body A
+exit A
+enter X
+enter Y
+inner X Y
+exit Y
+exit X
