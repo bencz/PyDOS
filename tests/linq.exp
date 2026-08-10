@@ -1,0 +1,9 @@
+Lazy chain: TypedList(['Charlie - 35', 'Alice - 30', 'Eve - 30'])
+First NYC by age desc: Charlie(35, NYC)
+City NYC: TypedList([Alice(30, NYC), Charlie(35, NYC)])
+City LA: TypedList([Bob(25, LA), Diana(28, LA)])
+City Chicago: TypedList([Eve(30, Chicago)])
+Avg age >= 28: 30.75
+Any Chicago: True
+Distinct: TypedList([1, 2, 3, 4])
+Joined: TypedList(['Alice lives in NYC, New York', 'Bob lives in LA, California', 'Charlie lives in NYC, New York', 'Diana lives in LA, California', 'Eve lives in Chicago, Illinois'])

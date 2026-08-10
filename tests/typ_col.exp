@@ -1,0 +1,16 @@
+TypedList(['mango', 'papaya', 'pineapple'])
+mango
+True
+True
+TypedList(['mango', 'pineapple'])
+fruits -> 1 -> mango
+fruits -> 1 -> pineapple
+fruits -> 2 -> orange
+fruits -> 2 -> lemon
+colors -> 10 -> red
+colors -> 10 -> orange
+colors -> 10 -> yellow
+colors -> 20 -> blue
+colors -> 20 -> green
+animals -> 1 -> dog
+animals -> 1 -> cat

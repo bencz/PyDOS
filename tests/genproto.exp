@@ -1,0 +1,20 @@
+Box(value=(2, 3, 5, 7), label='primes')
+unpacked: ('primes', (2, 3, 5, 7))
+length: 4 contains 5: True index 2: 5
+callable: 17
+filter: (True, (2, 3, 5, 7), 'value accepted')
+rejected: (False, None, 'value rejected')
+generator: ((0, (2, 3, 5, 7)), (1, (2, 3, 5, 7)), (2, (2, 3, 5, 7)))
+generator empty: ()
+staticmethod: True
+staticmethod false: False
+classmethod: Box(value=None, label='empty')
+classmethod arg: Box(value=None, label='named')
+class attribute: 3 Box
+property setter: (11, 13) primes
+text: 5 True e
+properties: hello text
+aliases: (10, 20) ('age', 17) (True, 'value', 'ok')
+generic function: a (20, 10)
+registry: 1 None 0
+registry pairs: (('first', 1), ('second', 2))

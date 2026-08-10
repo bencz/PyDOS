@@ -1,0 +1,55 @@
+16
+[(5, 'a'), (6, 'b')]
+[1, 2, 'x']
+7
+99
+stopped
+42
+True
+False
+99
+missing attr
+True
+True
+False
+2
+<class '__main__.Derived'>
+Derived
+True
+True
+True
+True
+True
+True
+base
+base
+base
+7
+base
+23
+True
+()
+(1, 2, 3)
+True
+True
+True
+True
+int
+builtins
+True
+True
+True
+True
+True
+True
+True
+True
+True
+True
+True
+12
+True
+31
+31
+31
+bad init

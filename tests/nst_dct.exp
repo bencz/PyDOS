@@ -1,0 +1,5 @@
+['apple', 'banana']
+[]
+['grape']
+fruits -> 1 -> ['apple', 'banana', 'orange']
+fruits -> 2 -> ['grape']

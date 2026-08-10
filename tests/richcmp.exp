@@ -1,0 +1,22 @@
+True True False False
+True True False
+False True False
+True True
+False False False
+quit cancel
+2
+True
+True
+True False
+False True
+[1, 2, 3]
+[3, 2, 1]
+['a', 'b']
+Key(3) Key(1)
+True False
+True False
+True True
+['2.7', '3.11', '3.12']
+True True True True
+True True
+False True False

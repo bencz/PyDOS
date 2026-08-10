@@ -1,0 +1,7 @@
+# Test all() builtin (Python-backed via stdlib PIR)
+print(all([True, True, True]))
+print(all([True, False, True]))
+print(all([False, False, False]))
+print(all([]))
+print(all([1, 2, 3]))
+print(all([1, 0, 3]))

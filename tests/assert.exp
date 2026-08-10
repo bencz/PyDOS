@@ -1,0 +1,6 @@
+assert True passed
+assert x > 0 passed
+assert 1 == 1 passed
+caught: AssertionError
+caught: assert 0
+all assert tests done

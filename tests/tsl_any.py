@@ -1,0 +1,7 @@
+# Test any() builtin (Python-backed via stdlib PIR)
+print(any([False, False, False]))
+print(any([False, True, False]))
+print(any([True, True, True]))
+print(any([]))
+print(any([0, 0, 0]))
+print(any([0, 1, 0]))

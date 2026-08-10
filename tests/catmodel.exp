@@ -1,0 +1,7 @@
+Actor(x=4, y=20, symbol='@', color=14, active=True)
+2 2
+76 20
+100
+4 20
+2
+True

@@ -1,0 +1,70 @@
+
+1. Generics, properties, and protocols
+Box(value=(2, 3, 5, 7), label='primes')
+unpacked: ('primes', (2, 3, 5, 7))
+length: 4 contains 5: True index 2: 5
+callable result: 17
+transformed: Box(value='2,3,5,7', label='transformed:primes')
+filter: (True, (2, 3, 5, 7), 'value accepted')
+generator: ((0, (2, 3, 5, 7)), (1, (2, 3, 5, 7)), (2, (2, 3, 5, 7)))
+yield and yield from: ((2, 3, 5, 7), 4, 17, (7, 5, 3, 2))
+staticmethod: True
+classmethod: Box(value=None, label='empty')
+class attribute: 3
+
+2. Nested functions, lambdas, and closures
+pipeline: ('primes[1]=17', 'primes[2]=(4, 9, 25, 49)', "primes[3]={2: 'even', 3: 'odd', 5: 'odd', 7: 'odd'}")
+calls captured through nonlocal: 3
+lambda closure: (2, 4, 6)
+
+3. Tuples and pattern matching
+swap: (20, 10)
+first: a
+record: ('age', 17)
+variadic tuple: ('data', 1, 'two', 3.0, True)
+empty tuple
+single-item tuple: 1
+pair: 1 and 2
+head=1, middle=[2, 3, 4], tail=5
+
+4. Name mangling with inheritance
+base:ALPHA
+subclass:BETA
+base class: base-class secret
+inherited method keeps the base-class mangle: base-class secret
+subclass: subclass secret
+materialized private names:
+  base attribute: ALPHA
+  subclass attribute: BETA
+  base method: base:ALPHA
+  subclass method: subclass:BETA
+base class dictionary: ('_Vault__class_secret', 'reveal_base_secret', 'class_secret')
+subclass dictionary: ('_SpecialVault__class_secret', 'reveal_special_secret', 'subclass_secret')
+direct access failed as expected: 'SpecialVault' object has no attribute '__secret'
+
+5. Descriptor, slots, context manager, and property
+before: ContextCounter(name='tasks', value=2, active=False)
+inside context: ContextCounter(name='tasks', value=2, active=True)
+incremented: 5
+after: ContextCounter(name='tasks', value=5, active=False)
+descriptor validation: value must be a non-negative integer
+slots blocked the attribute: 'ContextCounter' object has no attribute 'dynamic_attribute'
+
+6. Generators with next(), send(), and yield from
+initial: 10
++5: 15
++7: 22
+generator final return value: 22
+yield from range: (0, 1, 2, 3, 4)
+
+7. Comprehensions, walrus, sorting, and Python 3.12 f-strings
+comprehension: {'grape': 5, 'banana': 6, 'kiwi': 4, 'pineapple': 9}
+ordered: ('kiwi', 'grape', 'banana', 'pineapple')
+Report:
+kiwi=4
+grape=5
+banana=6
+pineapple=9
+
+8. Object pattern matching
+primes: first=2, remaining=[3, 5, 7]

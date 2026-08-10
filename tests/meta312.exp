@@ -1,0 +1,16 @@
+['prepare:ok', 'new:True', 'init:ok']
+True
+ok
+ok:new
+7
+7
+['prepare:ok', 'new:True', 'init:ok', 'prepare:child', 'new:True', 'init:child']
+True
+child
+child:new
+9
+9
+True
+custom
+11
+11

@@ -1,0 +1,30 @@
+0
+1
+2
+w1 else
+0
+1
+w2 after
+w3 else
+0
+1
+2
+f1 else
+0
+1
+f2 after
+f3 else
+a
+b
+c
+f4 else
+10
+20
+f5 after
+0
+0
+0
+1
+outer else
+found
+all loop else tests done

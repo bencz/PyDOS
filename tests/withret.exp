@@ -1,0 +1,8 @@
+True
+True
+7
+False
+False
+False
+False
+['return:enter', 'return', 'return:normal', 'suppress:enter', 'suppress:error', 'continued', 'outer:enter', 'inner:enter', 'outer:error', 'caught']

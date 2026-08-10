@@ -1,0 +1,26 @@
+base:ALPHA
+subclass:BETA
+5
+public API convention only
+base-class secret
+base-class secret
+subclass secret
+_Vault__secret
+_Vault__secret
+ALPHA BETA
+base:ALPHA
+subclass:BETA
+base-class secret subclass secret
+base-class secret
+base:SOLO SOLO
+2 3
+(3, 2, 3, 'hidden')
+<3>
+3 hidden
+not mangled not mangled either
+<3>
+Base:t Derived:t Untouched:t
+Base:x Untouched:y
+14 14 6
+base derived base
+3 3

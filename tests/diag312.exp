@@ -1,0 +1,5 @@
+('outside', [(10, 'visible', True), (20, 'visible', True)], [6, 8, 10], 10, [('a', 1), ('b', 2)], {'a': 1, 'b': 2}, [1, 2, 3, 4])
+origin
+diagonal:4
+tuple:1:2:2
+active:Ada

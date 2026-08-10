@@ -1,0 +1,20 @@
+Python runtime: 3.12.13
+Running Python 3.12 feature demonstrations...
+
+[PASS] PEP 695 generics and type aliases
+[PASS] private generic parameter
+[PASS] name mangling and slots
+[PASS] descriptor, property, staticmethod and classmethod
+[PASS] nested functions, lambdas and closures
+[PASS] generators, yield from, send and return
+[PASS] Python 3.12 f-strings
+[PASS] comprehension inlining and idioms
+[PASS] pattern matching and context manager
+[PASS] deep data-model hooks
+[PASS] multiple inheritance and MRO
+[PASS] override, TypedDict and Unpack
+[PASS] Python-level buffer protocol
+[PASS] sys.monitoring
+
+========================================================================
+Completed 14 tests: 14 passed, 0 failed.

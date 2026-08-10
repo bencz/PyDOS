@@ -1,0 +1,11 @@
+LookupError caught KeyError
+LookupError caught IndexError
+ArithmeticError caught ZeroDivisionError
+RuntimeError caught NotImplementedError
+OSError caught FileNotFoundError
+ImportError caught ModuleNotFoundError
+RuntimeError caught RecursionError
+ValueError caught UnicodeDecodeError
+BaseException caught SystemExit
+BaseException caught KeyboardInterrupt
+done

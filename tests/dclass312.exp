@@ -1,0 +1,23 @@
+Point(x=1, y=2)
+True
+True
+True
+2
+True
+True
+x
+2
+True
+{'x': 1, 'y': 2}
+(1, 2)
+Point(x=1, y=9)
+Bucket(value=3)
+[7]
+[]
+False
+Child(x=5, y=2, z=4)
+(5, 2, 4)
+True
+True
+PostInit(value=12)
+missing rejected

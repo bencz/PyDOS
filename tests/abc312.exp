@@ -1,0 +1,36 @@
+True
+True
+True
+frozenset({'value'})
+True
+blocked
+frozenset()
+42
+late blocked
+True
+explicit blocked
+False
+True
+True
+True
+True
+True
+True
+True
+True
+True
+False
+cycle rejected
+3
+True
+True
+True
+descriptor blocked
+frozenset()
+11
+True
+True
+False
+True
+False
+False

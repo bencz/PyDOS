@@ -1,0 +1,6 @@
+10
+20
+30
+40
+40
+['try', 'finally', 'except', 'except-finally', 'inner', 'inner-finally', 'outer-finally', 'try-ok', 'else', 'handled']

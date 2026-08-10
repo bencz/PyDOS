@@ -1,0 +1,7 @@
+E500: generic
+Validation[email]: invalid format
+E404: user not found
+E403: access denied
+500
+email
+user
