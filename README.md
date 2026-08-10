@@ -1,7 +1,6 @@
 <p align="center">
-  <img width="800" height="600" alt="PyDOS - Python for DOS" src="https://github.com/user-attachments/assets/e97afe93-6b30-46e3-8774-18a51ec373e5" />
+  <img width="800" height="600" alt="PyDOS - Python for DOS" src="https://github.com/user-attachments/assets/a660f536-378b-4567-ba35-f79e0c669dcc" />
 </p>
-
 
 **PyDOS compiles a growing Python 3.12+ language subset into standalone DOS executables for the 8086 and 386.**
 
@@ -28,8 +27,8 @@ Both DOS suites compile, assemble, link, execute under DOSEMU2, and compare thei
 
 | Code | Execution |
 |------|-----------|
-| <img src="https://github.com/user-attachments/assets/1d9b54af-98ac-473a-ac09-883d4a0dfbad" width="100%"/> | <img src="https://github.com/user-attachments/assets/11cd6398-726e-4b92-96d8-126c1a6ef94a" width="100%"/> |
-| <img width="737" height="409" alt="image" src="https://github.com/user-attachments/assets/77200dd0-93f6-47b8-af55-1baa927fb20f" /> | <img width="740" height="404" alt="image" src="https://github.com/user-attachments/assets/8bca1f60-35e9-429d-a889-d7e2cd8eadf0" /> |
+| <img src="https://github.com/user-attachments/assets/46824568-c713-458e-a287-c81e446f02c7" width="100%"/> | <img src="https://github.com/user-attachments/assets/d282b62b-b277-4f5b-9d04-ca5c1f97d8e0" width="100%"/> |
+| <img width="737" height="409" alt="image" src="https://github.com/user-attachments/assets/87f970a8-d39d-4161-bc02-88ab0c427d2b" /> | <img width="740" height="404" alt="image" src="https://github.com/user-attachments/assets/a621199c-915c-4f4e-ab96-f01a71ffcfb3" /> |
 
 ## TUI applications
 
@@ -48,8 +47,7 @@ Use `samples/build_dos_linux.sh 386 edit` and `build/samples/386/edit` for the p
 
 Source code: [`samples/edit`](samples/edit)
 
-<img width="785" height="611" alt="image" src="https://github.com/user-attachments/assets/2658b59d-e1b9-4bc9-b0cb-902f00d7d260" />
-
+<img width="785" height="611" alt="image" src="https://github.com/user-attachments/assets/cfe48f95-1c50-43bf-8036-3ec60c3d17f7" />
 
 ## Language Features
 
