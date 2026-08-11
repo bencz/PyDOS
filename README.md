@@ -1,6 +1,16 @@
+<h1 align="center">PyDOS - Python for MS-DOS</h1>
+
+<p align="center">
+  A Python 3.12+ compiler for native 8086 and 386 DOS executables
+</p>
+
+<hr>
+
+<!--
 <p align="center">
   <img width="800" height="600" alt="PyDOS - Python for DOS" src="https://github.com/user-attachments/assets/a660f536-378b-4567-ba35-f79e0c669dcc" />
 </p>
+-->
 
 **PyDOS compiles a growing Python 3.12+ language subset into standalone DOS executables for the 8086 and 386.**
 
