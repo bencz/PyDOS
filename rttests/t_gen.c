@@ -201,10 +201,14 @@ TEST(gen_next_exhausted)
     val = pydos_gen_next(g);
     PYDOS_DECREF(val);
 
-    /* Should now be exhausted (returns NULL, pc=-1) */
+    /* Should now be exhausted (returns NULL, pc=-1, StopIteration) */
     val = pydos_gen_next(g);
     ASSERT_NULL(val);
     ASSERT_EQ(g->v.gen.pc, -1);
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code,
+              PYDOS_EXC_STOP_ITERATION);
+    pydos_exc_clear();
 
     PYDOS_DECREF(g);
 }
@@ -233,9 +237,13 @@ TEST(gen_next_strings)
     ASSERT_EQ(v2->type, PYDT_STR);
     ASSERT_STR_EQ(v2->v.str.data, "beta");
 
-    /* Exhausted */
+    /* Exhausted: NULL return and pending StopIteration */
     v3 = pydos_gen_next(g);
     ASSERT_NULL(v3);
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code,
+              PYDOS_EXC_STOP_ITERATION);
+    pydos_exc_clear();
 
     PYDOS_DECREF(v1);
     PYDOS_DECREF(v2);
@@ -783,7 +791,12 @@ TEST(gen_close_exhausted)
     PYDOS_DECREF(result);
     result = pydos_gen_next(g);  /* exhausted */
 
+    ASSERT_NULL(result);
     ASSERT_EQ(g->v.gen.pc, -1);
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code,
+              PYDOS_EXC_STOP_ITERATION);
+    pydos_exc_clear();
 
     /* close() on exhausted gen — should be no-op */
     pydos_gen_close(g);

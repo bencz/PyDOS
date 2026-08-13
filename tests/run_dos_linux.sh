@@ -165,8 +165,20 @@ compile_test() {
         compiler_flags+=("${file_flags[@]}")
     fi
 
+    # tests/<name>.split holds N: split the flat-386 output into N object
+    # modules (the assembler is quadratic in file size, so a program that
+    # links the whole TUI library otherwise times out).  8086 ignores it.
+    local split_n=1
+    local split_file="$ROOT_DIR/tests/$test_name.split"
+    if [[ "$target" == "386" && -f "$split_file" ]]; then
+        read -r split_n < "$split_file"
+    fi
+
     if [[ "$target" == "386" ]]; then
         compiler_flags+=(-t 386)
+        if [[ "$split_n" -gt 1 ]]; then
+            compiler_flags+=(--split "$split_n")
+        fi
     fi
 
     if ! bin/pydos "$source_file" -o "$asm_file" \
@@ -187,14 +199,27 @@ compile_test() {
             return 1
         fi
     else
-        if ! wasm -3 -mf -d0 -zq -we -fo="$object_file" "$asm_file" \
-                >> "$build_log" 2>&1; then
-            return 1
-        fi
+        # Assemble the base object plus any split fragments (_p1, _p2, ...)
+        # and collect them into the link's file list.
+        local -a asm_parts=("$asm_file")
+        local part
+        for ((part = 1; part < split_n; part++)); do
+            asm_parts+=("$test_dir/${test_name}_p${part}.asm")
+        done
+        local -a link_files=()
+        local a obj
+        for a in "${asm_parts[@]}"; do
+            obj="${a%.asm}.obj"
+            if ! wasm -3 -mf -d0 -zq -we -fo="$obj" "$a" \
+                    >> "$build_log" 2>&1; then
+                return 1
+            fi
+            link_files+=(file "$obj")
+        done
 
         if ! wlink option quiet system causeway option stack=65536 \
                 option dosseg option eliminate name "$exe_file" \
-                file "$object_file" \
+                "${link_files[@]}" \
                 library "$BUILD_ROOT/386/PDOS32RT.LIB" library clib3s \
                 >> "$build_log" 2>&1; then
             return 1
@@ -247,6 +272,23 @@ run_target() {
 
     echo "=== Running $total integration tests for $target ==="
     for test_name in "${TESTS[@]}"; do
+        # tests/<name>.nodos marks a test whose logic is fully covered by
+        # the CPython golden run and adds no code-generation coverage
+        # worth an emulated DOS execution (headless App event-loop
+        # drivers).  Skipped on both targets.
+        if [[ -f "$ROOT_DIR/tests/$test_name.nodos" ]]; then
+            echo "  SKIP  $test_name (CPython-only: $(head -1 "$ROOT_DIR/tests/$test_name.nodos"))"
+            total=$((total - 1))
+            continue
+        fi
+        # tests/<name>.386 marks a test whose native executable exceeds
+        # the 8086 640 KB budget (the VM execution mode is the planned
+        # way to lift this); it still runs fully on the 386 target.
+        if [[ "$target" == "8086" && -f "$ROOT_DIR/tests/$test_name.386" ]]; then
+            echo "  SKIP  $test_name (386-only: $(head -1 "$ROOT_DIR/tests/$test_name.386"))"
+            total=$((total - 1))
+            continue
+        fi
         if ! compile_test "$target" "$test_name"; then
             echo "  FAIL  $test_name (build)"
             sed -n '1,12p' "$BUILD_ROOT/$target/tests/$test_name/build.log" 2>/dev/null

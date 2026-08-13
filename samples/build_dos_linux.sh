@@ -36,7 +36,14 @@ export PATH="$ROOT_DIR/toolchains/openwatcom/hosts/linux/bin:$WATCOM/binl:$WATCO
 if [[ $# -gt 0 ]]; then
     SAMPLES=("$@")
 else
-    SAMPLES=(hello_project tui_demo alley_cat edit)
+    # edit and tui_demo link the full widget stack and are 386-only (the
+# native code exceeds the 8086 640 KB budget); hello_project and
+# alley_cat build for both targets.  build_sample skips the 386-only
+# ones under the 8086 target.
+SAMPLES=(hello_project tui_demo alley_cat edit)
+SAMPLES_386_ONLY=(tui_demo edit)
+# Samples whose 386 assembly is large enough to need split object output.
+SAMPLES_SPLIT=(tui_demo edit)
 fi
 
 cd "$ROOT_DIR"
@@ -86,6 +93,16 @@ build_sample() {
         echo "Unknown sample: $sample" >&2
         return 1
     fi
+
+    if [[ "$target" == "8086" ]]; then
+        for only386 in "${SAMPLES_386_ONLY[@]}"; do
+            if [[ "$sample" == "$only386" ]]; then
+                echo "Skipping $sample on 8086 (386-only: native code exceeds 640 KB)"
+                return 0
+            fi
+        done
+    fi
+
     mkdir -p "$output_dir"
 
     if [[ "$target" == "8086" ]]; then
@@ -97,11 +114,30 @@ build_sample() {
             library "$BUILD_ROOT/8086/PYDOSRT.LIB" library clibl \
             library emu87 || return 1
     else
+        # Apps that link the whole TUI library produce a multi-megabyte
+        # .asm the assembler handles quadratically; --split emits several
+        # smaller object modules instead.  Widget-heavy samples opt in.
+        local split_n=1
+        case " ${SAMPLES_SPLIT[*]} " in
+            *" $sample "*) split_n=4 ;;
+        esac
+        local -a split_flag=()
+        if [[ "$split_n" -gt 1 ]]; then split_flag=(--split "$split_n"); fi
+
         bin/pydos "$sample_dir/main.py" -o "$asm_file" -t 386 \
+            "${split_flag[@]}" \
             --search-path "$sample_dir" --stdlib-idx bin/stdlib.idx || return 1
-        wasm -3 -mf -d0 -zq -we -fo="$object_file" "$asm_file" || return 1
+
+        local -a link_files=()
+        local a obj part
+        for a in "$asm_file" $(for ((part=1; part<split_n; part++)); do \
+                echo "$output_dir/main_p${part}.asm"; done); do
+            obj="${a%.asm}.obj"
+            wasm -3 -mf -d0 -zq -we -fo="$obj" "$a" || return 1
+            link_files+=(file "$obj")
+        done
         wlink option quiet system causeway option stack=65536 option dosseg \
-            option eliminate name "$exe_file" file "$object_file" \
+            option eliminate name "$exe_file" "${link_files[@]}" \
             library "$BUILD_ROOT/386/PDOS32RT.LIB" library clib3s || return 1
     fi
     echo "Built $target $sample -> $exe_file"

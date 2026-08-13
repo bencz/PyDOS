@@ -1,7 +1,12 @@
+"""Headless test of the EDIT sample's document model (TextBuffer).
+
+TextBuffer is pydos.tui's TextDocument plus DOS file persistence; the
+menu behavior that used to live here moved to the library and is
+covered by tests/widmnu.py.
+"""
+
 from buffer import TextBuffer
-from menus import MenuBar
 from pydos.io.files import write_text
-from pydos.io.tui import Key
 
 
 write_text("EDT312.TMP", "")
@@ -49,9 +54,4 @@ buffer.move_home()
 buffer.insert("Z", False)
 buffer.insert_tab(4)
 print(buffer.current_line(), buffer.column, buffer.dirty)
-
-menu = MenuBar()
-menu.open(2)
-menu.handle_key(Key.DOWN)
-print(menu.current_menu().title, menu.item_index)
-print(menu.handle_key(13), menu.active)
+print(buffer.path, buffer.exists)

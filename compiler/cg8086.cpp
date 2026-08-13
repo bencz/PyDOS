@@ -353,57 +353,74 @@ void CodeGenerator8086::emit_code_section()
         emit_blank();
     }
 
-    /* ---- main_ entry point (only for main module) ---- */
-    if (is_main_module) {
-        char init_label[128];
-        func_label(init_label, sizeof(init_label), "__init__");
+    emit_main_entry_seg(&code_segment);
+}
 
-        fprintf(out, ".CODE PYCODE%d\n", code_segment++);
-        fprintf(out, "PUBLIC main_\n");
-        fprintf(out, "main_ PROC FAR\n");
-        emit_line("push bp");
-        emit_line("mov  bp, sp");
-        /* Establish DGROUP once at the DOS entry boundary.  Every generated
-         * and Open Watcom function preserves DS from this point onward. */
-        emit_line("push ss");
-        emit_line("pop  ds");
-        emit_blank();
+/* ================================================================= */
+/* emit_main_entry                                                    */
+/* ================================================================= */
 
-        /* Initialize the runtime */
-        emit_comment("init runtime");
+void CodeGenerator8086::emit_main_entry()
+{
+    /* Split generation (which would call this) is 386-only; keep a
+     * fresh segment counter for the single-file path's sake. */
+    int code_segment = 0;
+    emit_main_entry_seg(&code_segment);
+}
+
+void CodeGenerator8086::emit_main_entry_seg(int *code_segment)
+{
+    /* main_ entry point (only for the main module) */
+    if (!is_main_module) return;
+
+    char init_label[128];
+    func_label(init_label, sizeof(init_label), "__init__");
+
+    fprintf(out, ".CODE PYCODE%d\n", (*code_segment)++);
+    fprintf(out, "PUBLIC main_\n");
+    fprintf(out, "main_ PROC FAR\n");
+    emit_line("push bp");
+    emit_line("mov  bp, sp");
+    /* Establish DGROUP once at the DOS entry boundary.  Every generated
+     * and Open Watcom function preserves DS from this point onward. */
+    emit_line("push ss");
+    emit_line("pop  ds");
+    emit_blank();
+
+    /* Initialize the runtime */
+    emit_comment("init runtime");
+    emit_restore_ds();
+    emit_line("call far ptr pydos_rt_init_");
+    emit_blank();
+
+    /* Call module __init__ (top-level code) */
+    emit_comment("call __init__");
+    emit_restore_ds();
+    emit_line("call far ptr %s", init_label);
+    emit_blank();
+
+    /* Call user-specified entry function (--entry) */
+    if (has_main_func && entry_func) {
+        char entry_label[128];
+        func_label(entry_label, sizeof(entry_label), entry_func);
+        emit_comment("call entry: %s()", entry_func);
         emit_restore_ds();
-        emit_line("call far ptr pydos_rt_init_");
+        emit_line("call far ptr %s", entry_label);
         emit_blank();
-
-        /* Call module __init__ (top-level code) */
-        emit_comment("call __init__");
-        emit_restore_ds();
-        emit_line("call far ptr %s", init_label);
-        emit_blank();
-
-        /* Call user-specified entry function (--entry) */
-        if (has_main_func && entry_func) {
-            char entry_label[128];
-            func_label(entry_label, sizeof(entry_label), entry_func);
-            emit_comment("call entry: %s()", entry_func);
-            emit_restore_ds();
-            emit_line("call far ptr %s", entry_label);
-            emit_blank();
-        }
-
-        /* Shutdown runtime */
-        emit_comment("shutdown runtime");
-        emit_restore_ds();
-        emit_line("call far ptr pydos_rt_shutdown_");
-        emit_blank();
-
-        /* Exit to DOS via INT 21h function 4Ch */
-        emit_comment("exit to DOS");
-        emit_line("mov  ax, 4C00h");
-        emit_line("int  21h");
-
-        fprintf(out, "main_ ENDP\n");
     }
+
+    /* Shutdown runtime */
+    emit_comment("shutdown runtime");
+    emit_restore_ds();
+    emit_line("call far ptr pydos_rt_shutdown_");
+    emit_blank();
+
+    /* Exit to DOS via INT 21h function 4Ch */
+    emit_comment("exit to DOS");
+    emit_line("mov  ax, 4C00h");
+    emit_line("int  21h");
+
+    fprintf(out, "main_ ENDP\n");
 }
 
 /* ================================================================= */
@@ -1169,7 +1186,7 @@ void CodeGenerator8086::emit_inplace(IRInstr *instr)
 void CodeGenerator8086::emit_bitwise(IRInstr *instr)
 {
     /* IR_BITAND/BITOR/BITXOR/SHL/SHR: dest = src1 op src2 */
-    const char *func_name = runtime_bitwise_func(instr->op);
+    const char *func_name = runtime_bitwise_func(instr);
 
     emit_comment("BITWISE %s t%d, t%d -> t%d",
                  irop_name(instr->op), instr->src1, instr->src2, instr->dest);

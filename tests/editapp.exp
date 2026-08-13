@@ -1,0 +1,21 @@
+['hello', 'world']
+1 5
+False False
+hello
+world
+
+--
+  File  Search  View  Help                        
+ÚÄ EDIT  EDAP312.TMP ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³hello                                           ³
+³world                                           ³
+³            ÉÍÍÍÍÍÍÍÍ Find ÍÍÍÍÍÍÍÍ»            ³
+³            ºText not found: wo    º            ³
+³            º                      º            ³
+³            º[                     º            ³
+³            º                      º            ³
+³            ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼            ³
+³                                                ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+ Ln 2/2  Col 6  INS                               
+ F1 Help  F2 Save  F3 Find  F4 Next  F6 Replace  C

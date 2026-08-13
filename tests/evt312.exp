@@ -1,0 +1,16 @@
+0 1 2 3
+KeyEvent(key=Key(code=15, name='o', ctrl=True, alt=False, shift=False))
+KeyEvent(key=Key(code=97, name='a', ctrl=False, alt=False, shift=False))
+KeyEvent(key=Key(code=13, name='enter', ctrl=False, alt=False, shift=False))
+MouseEvent(kind=1, x=10, y=5, button=0)
+MouseEvent(kind=2, x=10, y=5, button=0)
+MouseEvent(kind=3, x=3, y=4, button=-1)
+KeyEvent(key=Key(code=27, name='escape', ctrl=False, alt=False, shift=False))
+True
+None
+MouseEvent(kind=1, x=10, y=5, button=0)
+MouseEvent(kind=2, x=10, y=5, button=0)
+MouseEvent(kind=1, x=70, y=20, button=1)
+MouseEvent(kind=3, x=12, y=6, button=-1)
+None
+MouseEvent(kind=1, x=33, y=9, button=0)

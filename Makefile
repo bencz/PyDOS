@@ -54,6 +54,7 @@ COMPILER_OBJS = &
     compiler\piresc.obj &
     compiler\pirspc.obj &
     compiler\modpath.obj &
+    compiler\astdce.obj &
     compiler\modscan.obj &
     compiler\stdscan.obj &
     compiler\pirsrlz.obj &
@@ -62,6 +63,7 @@ COMPILER_OBJS = &
 
 RUNTIME_OBJS = &
     runtime\pdos_obj.obj &
+    runtime\pdos_ops.obj &
     runtime\pdos_mon.obj &
     runtime\pdos_mem.obj &
     runtime\pdos_gc.obj &
@@ -119,10 +121,12 @@ TEST_OBJS = &
     rttests\t_fzs.obj &
     rttests\t_cpx.obj &
     rttests\t_bya.obj &
-    rttests\t_vm.obj
+    rttests\t_vm.obj &
+    rttests\t_tui.obj
 
 RUNTIME32_OBJS = &
     runtime\pdos_o32.obj &
+    runtime\pdos_op3.obj &
     runtime\pdos_k32.obj &
     runtime\pdos_m32.obj &
     runtime\pdos_g32.obj &
@@ -180,7 +184,8 @@ TEST32_OBJS = &
     rttests\t_fzs32.obj &
     rttests\t_cpx32.obj &
     rttests\t_bya32.obj &
-    rttests\t_vm32.obj
+    rttests\t_vm32.obj &
+    rttests\t_tui32.obj
 
 # ===========================================================================
 # Top-level targets
@@ -273,6 +278,7 @@ $(BIN)\PYDOS.EXE: $(COMPILER_OBJS)
     %append pydos.lnk file compiler\piresc.obj
     %append pydos.lnk file compiler\pirspc.obj
     %append pydos.lnk file compiler\modpath.obj
+    %append pydos.lnk file compiler\astdce.obj
     %append pydos.lnk file compiler\modscan.obj
     %append pydos.lnk file compiler\stdscan.obj
     %append pydos.lnk file compiler\pirsrlz.obj
@@ -307,6 +313,7 @@ runtime: $(LIB)\PYDOSRT.LIB .SYMBOLIC
 $(LIB)\PYDOSRT.LIB: $(RUNTIME_OBJS)
     %write  pydosrt.lnk -q -n $@
     %append pydosrt.lnk +runtime\pdos_obj.obj
+    %append pydosrt.lnk +runtime\pdos_ops.obj
     %append pydosrt.lnk +runtime\pdos_mon.obj
     %append pydosrt.lnk +runtime\pdos_mem.obj
     %append pydosrt.lnk +runtime\pdos_gc.obj
@@ -343,6 +350,7 @@ $(LIB)\PYDOSRT.LIB: $(RUNTIME_OBJS)
 
 runtime_debug: .SYMBOLIC
     $(CC) $(CDBGFLAGS) -fo=runtime\pdos_obj.obj runtime\pdos_obj.c
+    $(CC) $(CDBGFLAGS) -fo=runtime\pdos_ops.obj runtime\pdos_ops.c
     $(CC) $(CDBGFLAGS) -fo=runtime\pdos_mon.obj runtime\pdos_mon.c
     $(CC) $(CDBGFLAGS) -fo=runtime\pdos_mem.obj runtime\pdos_mem.c
     $(CC) $(CDBGFLAGS) -fo=runtime\pdos_gc.obj runtime\pdos_gc.c
@@ -372,6 +380,7 @@ runtime_debug: .SYMBOLIC
     $(CC) $(CDBGFLAGS) -fo=runtime\pdos_vm.obj runtime\pdos_vm.c
     %write  pydosrt.lnk -q -n $(LIB)\PYDOSRT.LIB
     %append pydosrt.lnk +runtime\pdos_obj.obj
+    %append pydosrt.lnk +runtime\pdos_ops.obj
     %append pydosrt.lnk +runtime\pdos_mon.obj
     %append pydosrt.lnk +runtime\pdos_mem.obj
     %append pydosrt.lnk +runtime\pdos_gc.obj
@@ -439,6 +448,7 @@ $(BIN)\RTTEST.EXE: $(TEST_OBJS) $(LIB)\PYDOSRT.LIB
     %append rttest.lnk file rttests\t_cpx.obj
     %append rttest.lnk file rttests\t_bya.obj
     %append rttest.lnk file rttests\t_vm.obj
+    %append rttest.lnk file rttests\t_tui.obj
     %append rttest.lnk library $(LIB)\PYDOSRT.LIB
     wlink @rttest.lnk
 
@@ -451,6 +461,7 @@ runtime32: $(LIB)\PDOS32RT.LIB .SYMBOLIC
 $(LIB)\PDOS32RT.LIB: $(RUNTIME32_OBJS)
     %write  pdos32rt.lnk -q -n $@
     %append pdos32rt.lnk +runtime\pdos_o32.obj
+    %append pdos32rt.lnk +runtime\pdos_op3.obj
     %append pdos32rt.lnk +runtime\pdos_k32.obj
     %append pdos32rt.lnk +runtime\pdos_m32.obj
     %append pdos32rt.lnk +runtime\pdos_g32.obj
@@ -481,6 +492,9 @@ $(LIB)\PDOS32RT.LIB: $(RUNTIME32_OBJS)
     wlib @pdos32rt.lnk
 
 runtime\pdos_o32.obj: runtime\pdos_obj.c .AUTODEPEND
+    $(CC386) $(C386FLAGS) -fo=$@ $[@
+
+runtime\pdos_op3.obj: runtime\pdos_ops.c .AUTODEPEND
     $(CC386) $(C386FLAGS) -fo=$@ $[@
 
 runtime\pdos_k32.obj: runtime\pdos_mon.c .AUTODEPEND
@@ -602,6 +616,7 @@ $(BIN)\RTTEST32.EXE: $(TEST32_OBJS) $(LIB)\PDOS32RT.LIB
     %append rtts32.lnk file rttests\t_cpx32.obj
     %append rtts32.lnk file rttests\t_bya32.obj
     %append rtts32.lnk file rttests\t_vm32.obj
+    %append rtts32.lnk file rttests\t_tui32.obj
     %append rtts32.lnk library $(LIB)\PDOS32RT.LIB
     wlink @rtts32.lnk
 
@@ -687,6 +702,9 @@ rttests\t_cpx32.obj: rttests\t_cpx.c .AUTODEPEND
     $(CC386) $(C386FLAGS) -fo=$@ $[@
 
 rttests\t_bya32.obj: rttests\t_bya.c .AUTODEPEND
+    $(CC386) $(C386FLAGS) -fo=$@ $[@
+
+rttests\t_tui32.obj: rttests\t_tui.c .AUTODEPEND
     $(CC386) $(C386FLAGS) -fo=$@ $[@
 
 rttests\t_vm32.obj: rttests\t_vm.c .AUTODEPEND

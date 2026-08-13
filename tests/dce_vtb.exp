@@ -1,0 +1,6 @@
+decorator ran
+Wrapped(1)
+Wrapped(2)
+Wrapped(3)
+5
+True

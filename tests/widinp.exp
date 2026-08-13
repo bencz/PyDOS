@@ -1,0 +1,13 @@
+|abc   | (3, 0, 1)
+abcdef |bcdef | (5, 0, 1)
+(0, 0, 1)
+Xabcdef
+Xbcdef
+Xbcde
+zbcde False
+0123456789
+True ['0123456789']
+False
+['abcd', 'abcde', 'abcdef', 'Xabcdef', 'Xbcdef', 'Xbcde', 'zbcde']
+|type h|
+|      | (0, 0, 2)

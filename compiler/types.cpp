@@ -29,8 +29,11 @@ struct TypePool {
 static TypePool *pool_head = 0;
 static TypePool *pool_current = 0;
 
-/* String buffer for type_to_string results */
-static char string_buf[512];
+/* Rotating buffers for type_to_string results: error messages format two
+ * types in one call, so consecutive results must not share storage. */
+#define TYPE_STRING_BUFS 4
+static char string_bufs[TYPE_STRING_BUFS][512];
+static int string_buf_next = 0;
 
 /* Interned string table for type names */
 #define INTERN_TABLE_SIZE 256
@@ -938,9 +941,11 @@ static int type_to_string_impl(TypeInfo *t, char *buf, int pos, int max)
 
 const char *type_to_string(TypeInfo *t)
 {
-    string_buf[0] = '\0';
-    type_to_string_impl(t, string_buf, 0, sizeof(string_buf));
-    return string_buf;
+    char *buf = string_bufs[string_buf_next];
+    string_buf_next = (string_buf_next + 1) % TYPE_STRING_BUFS;
+    buf[0] = '\0';
+    type_to_string_impl(t, buf, 0, sizeof(string_bufs[0]));
+    return buf;
 }
 
 /* ------------------------------------------------------------------ */

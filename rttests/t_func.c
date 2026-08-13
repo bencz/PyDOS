@@ -237,7 +237,7 @@ TEST(vtable_signature_metadata)
                                 (void (far *)(void))bound_add, 2);
     slot = pydos_vtable_lookup_slot(vtable, vtable->methods[0].name_hash);
     ASSERT_NOT_NULL(slot);
-    ASSERT_TRUE(slot->signature_known);
+    ASSERT_TRUE(PYDOS_METHOD_HAS_SIGNATURE(slot));
     ASSERT_EQ(slot->arg_count, 2);
     ASSERT_TRUE(pydos_code_ref_native_entry(slot->code_ref) ==
                 (void (far *)(void))bound_add);

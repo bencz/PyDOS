@@ -15,6 +15,10 @@
 extern int tf_pass;
 extern int tf_fail;
 
+/* Defined in main.c: reports and clears a runtime exception left pending by
+ * the test that just ran (tests must consume the exceptions they trigger). */
+extern int tf_exc_leaked(void);
+
 /* Per-file flag used by RUN/ASSERT macros */
 static int _tf_cur_fail;
 
@@ -25,11 +29,19 @@ static int _tf_cur_fail;
 /* Define a test function */
 #define TEST(name) static void test_##name(void)
 
-/* Run a test function and report pass/fail */
+/* Run a test function and report pass/fail.  A runtime exception still
+ * pending after the test body is a bug in the test (it must assert and
+ * consume the errors it triggers); it fails the leaking test instead of
+ * silently poisoning the tests that run after it. */
 #define RUN(name) \
     do { \
         _tf_cur_fail = 0; \
         test_##name(); \
+        if (tf_exc_leaked()) { \
+            printf("    leaked pending exception (%s:RUN(%s))\n", \
+                   __FILE__, #name); \
+            _tf_cur_fail = 1; \
+        } \
         if (_tf_cur_fail) { \
             tf_fail++; \
             printf("  FAIL: %s\n", #name); \

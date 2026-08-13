@@ -3906,9 +3906,24 @@ PIRValue PIRBuilder::build_compare(ASTNode *node)
         return result;
     }
 
-    /* Chained: a op1 b op2 c ... */
+    /* Chained: a op1 b op2 c ...
+     *
+     * Alloca-based merge, same pattern as build_boolop: every path
+     * stores into one slot before reaching the end block, so the loaded
+     * result is defined regardless of which comparison short-circuited.
+     * (Returning the last comparison's SSA value looked right when the
+     * chain was used alone, but its defining instruction never runs on
+     * the short-circuit path — inside an and/or that surfaced as a null
+     * result at runtime.) */
     PIRBlock *end_block = new_block("cmp_end");
-    PIRValue result_val = emit_const_bool(1);
+
+    char merge_name[32];
+    sprintf(merge_name, "__cmpchain_%d", current_func->next_value_id);
+    PIRValue merge_addr = pir_func_alloc_value(current_func, PIR_TYPE_PTR);
+    PIRInst *alloca_inst = emit(PIR_ALLOCA);
+    alloca_inst->result = merge_addr;
+    alloca_inst->str_val = pir_str_dup(merge_name);
+    current_func->num_locals++;
 
     int i;
     ASTNode *c = comp;
@@ -3929,12 +3944,21 @@ PIRValue PIRBuilder::build_compare(ASTNode *node)
 
             switch_to_block(false_block);
             /* Short circuit: result is false */
-            result_val = emit_const_bool(0);
+            {
+                PIRValue false_val = emit_const_bool(0);
+                PIRInst *st = emit(PIR_STORE);
+                st->operands[0] = merge_addr;
+                st->operands[1] = false_val;
+                st->num_operands = 2;
+            }
             emit_branch(end_block);
 
             switch_to_block(next_block);
         } else {
-            result_val = cmp_result;
+            PIRInst *st = emit(PIR_STORE);
+            st->operands[0] = merge_addr;
+            st->operands[1] = cmp_result;
+            st->num_operands = 2;
         }
 
         left = right;
@@ -3944,11 +3968,12 @@ PIRValue PIRBuilder::build_compare(ASTNode *node)
     if (!block_is_terminated()) emit_branch(end_block);
     switch_to_block(end_block);
 
-    /* Note: without proper phi nodes here, the result from short-circuit
-       path won't merge correctly. For now, we just return the last
-       comparison result. Proper phi insertion is a future enhancement
-       (or handled by mem2reg). */
-    return result_val;
+    PIRValue result = pir_func_alloc_value(current_func, PIR_TYPE_PYOBJ);
+    PIRInst *ld = emit(PIR_LOAD);
+    ld->result = result;
+    ld->operands[0] = merge_addr;
+    ld->num_operands = 1;
+    return result;
 }
 
 PIRValue PIRBuilder::build_boolop(ASTNode *node)

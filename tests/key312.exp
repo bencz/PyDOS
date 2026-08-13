@@ -1,0 +1,20 @@
+Key(code=97, name='a', ctrl=False, alt=False, shift=False)
+True True False
+Key(code=19, name='s', ctrl=True, alt=False, shift=False)
+True True False
+Key(code=65, name='a', ctrl=False, alt=False, shift=True)
+True True False
+Key(code=328, name='up', ctrl=False, alt=False, shift=False)
+True True False
+Key(code=289, name='f', ctrl=False, alt=True, shift=False)
+True False False
+Key(code=389, name='f11', ctrl=False, alt=False, shift=False)
+True True
+True
+True
+Key(code=339, name='delete', ctrl=True, alt=True, shift=False)
+Key(code=26, name='z', ctrl=True, alt=False, shift=True)
+True page_down
+True
+False
+True False False

@@ -48,6 +48,13 @@ PyDosObj far * PYDOS_API pydos_io_file_write(int argc,
 PyDosObj far * PYDOS_API pydos_io_file_close(int argc,
                                               PyDosObj far * far *argv);
 
+/* Directory listing for the FileDialog widget: FindFirst/FindNext with
+ * 8.3 names.  Returns "" when exhausted (or always, on the host). */
+PyDosObj far * PYDOS_API pydos_dir_first(int argc,
+                                         PyDosObj far * far *argv);
+PyDosObj far * PYDOS_API pydos_dir_next(int argc,
+                                        PyDosObj far * far *argv);
+
 void PYDOS_API pydos_io_init(void);
 void PYDOS_API pydos_io_shutdown(void);
 

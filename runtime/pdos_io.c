@@ -524,3 +524,67 @@ PyDosObj far * PYDOS_API pydos_io_file_close(int argc,
     }
     return pydos_obj_new_none();
 }
+
+/* ================================================================== */
+/* Directory listing (FindFirst/FindNext)                             */
+/*                                                                     */
+/* Serves the FileDialog widget.  The Watcom RTL performs the DOS     */
+/* INT 21h AH=4Eh/4Fh calls and the extender pointer translation on   */
+/* both targets.  The host build is headless and always reports an    */
+/* empty directory; tests inject a fake lister instead.               */
+/* ================================================================== */
+
+#ifdef __WATCOMC__
+static struct find_t pydos_dir_state;
+static int pydos_dir_active = 0;
+#endif
+
+PyDosObj far * PYDOS_API pydos_dir_first(int argc,
+                                         PyDosObj far * far *argv)
+{
+#ifdef __WATCOMC__
+    char pattern[128];
+    unsigned int i, len;
+
+    if (argc < 1 || argv[0] == (PyDosObj far *)0 ||
+        (PyDosType)argv[0]->type != PYDT_STR) {
+        pydos_dir_active = 0;
+        return pydos_obj_new_str((const char far *)"", 0);
+    }
+    len = argv[0]->v.str.len;
+    if (len > sizeof(pattern) - 1) len = sizeof(pattern) - 1;
+    for (i = 0; i < len; i++) pattern[i] = argv[0]->v.str.data[i];
+    pattern[len] = '\0';
+
+    if (_dos_findfirst(pattern, _A_NORMAL | _A_RDONLY | _A_ARCH,
+                       &pydos_dir_state) != 0) {
+        pydos_dir_active = 0;
+        return pydos_obj_new_str((const char far *)"", 0);
+    }
+    pydos_dir_active = 1;
+    return pydos_obj_new_str((const char far *)pydos_dir_state.name,
+                             (unsigned int)strlen(pydos_dir_state.name));
+#else
+    (void)argc;
+    (void)argv;
+    return pydos_obj_new_str((const char far *)"", 0);
+#endif
+}
+
+PyDosObj far * PYDOS_API pydos_dir_next(int argc,
+                                        PyDosObj far * far *argv)
+{
+    (void)argc;
+    (void)argv;
+#ifdef __WATCOMC__
+    if (!pydos_dir_active ||
+        _dos_findnext(&pydos_dir_state) != 0) {
+        pydos_dir_active = 0;
+        return pydos_obj_new_str((const char far *)"", 0);
+    }
+    return pydos_obj_new_str((const char far *)pydos_dir_state.name,
+                             (unsigned int)strlen(pydos_dir_state.name));
+#else
+    return pydos_obj_new_str((const char far *)"", 0);
+#endif
+}

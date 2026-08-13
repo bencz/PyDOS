@@ -154,7 +154,7 @@ private:
     /* Module search paths for import scanning */
     const char **search_paths;
     int num_search_paths;
-    ModuleInfo *scanned_modules;   /* heap-allocated array (max 32) */
+    ModuleInfo *scanned_modules;   /* heap array (SEMA_MAX_SCANNED_MODULES) */
     int num_scanned;
 
     /* Lookup a scanned module (returns NULL if not found/scanned) */

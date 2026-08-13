@@ -32,6 +32,11 @@ static char *str_dup(const char *s)
     return d;
 }
 
+/* Capacity of the scanned-module symbol cache.  Overflow degrades
+ * gracefully (imported names fall back to untyped SYM_VAR), but keep it
+ * ahead of the module counts real programs link. */
+#define SEMA_MAX_SCANNED_MODULES 64
+
 /* ------------------------------------------------------------------ */
 /* Helper: check if type is class-like (TY_CLASS or TY_GENERIC_INST)  */
 /* TY_GENERIC_INST carries class_info from its base generic class,    */
@@ -1251,10 +1256,22 @@ void SemanticAnalyzer::analyze_import(ASTNode *node)
     if (!node) return;
 
     if (node->kind == AST_IMPORT) {
-        /* import module [as alias] */
+        /* import module [as alias].
+         * Only 'import sys' resolves at runtime; every other module is
+         * linked by source, which only 'from module import name' does.
+         * A bare 'import x' used to compile silently and produce a broken
+         * executable, so reject it here with the working alternative. */
+        const char *module = node->data.import_stmt.module;
         const char *name = node->data.import_stmt.alias
                            ? node->data.import_stmt.alias
-                           : node->data.import_stmt.module;
+                           : module;
+        if (module && strcmp(module, "sys") != 0) {
+            error_fmt(node,
+                      "'import %s' is not supported (only 'import sys'); "
+                      "use 'from %s import ...' so the module is linked",
+                      module, module);
+            return;
+        }
         if (name) {
             declare(name, type_any, SYM_MODULE);
         }
@@ -1266,14 +1283,15 @@ void SemanticAnalyzer::analyze_import(ASTNode *node)
         /* Try to scan the module if search_paths are configured */
         if (mod_name && num_search_paths > 0) {
             mi = find_scanned_module(mod_name);
-            if (!mi && num_scanned < 32) {
+            if (!mi && num_scanned < SEMA_MAX_SCANNED_MODULES) {
                 /* Allocate cache on first use */
                 if (!scanned_modules) {
                     scanned_modules = (ModuleInfo *)malloc(
-                        32 * sizeof(ModuleInfo));
+                        SEMA_MAX_SCANNED_MODULES * sizeof(ModuleInfo));
                     if (scanned_modules)
                         memset(scanned_modules, 0,
-                               32 * sizeof(ModuleInfo));
+                               SEMA_MAX_SCANNED_MODULES *
+                               sizeof(ModuleInfo));
                 }
                 if (scanned_modules) {
                     module_scan(mod_name, search_paths, num_search_paths,
@@ -1710,6 +1728,10 @@ TypeInfo *SemanticAnalyzer::analyze_binop(ASTNode *node)
         if (left_type->kind == TY_SET && right_type->kind == TY_SET) {
             return left_type;
         }
+        /* Allow class operator overloading (__and__/__or__/__xor__ and
+         * their reflected forms) */
+        if (type_is_class_like(left_type) || type_is_class_like(right_type))
+            return type_any;
         error_fmt(node, "unsupported operand types for bitwise op: '%s' and '%s'",
                   type_to_string(left_type), type_to_string(right_type));
         return type_error;
@@ -1720,6 +1742,10 @@ TypeInfo *SemanticAnalyzer::analyze_binop(ASTNode *node)
             (right_type->kind == TY_INT || right_type->kind == TY_BOOL)) {
             return type_int;
         }
+        /* Allow class operator overloading (__lshift__/__rshift__ and
+         * their reflected forms) */
+        if (type_is_class_like(left_type) || type_is_class_like(right_type))
+            return type_any;
         error_fmt(node, "unsupported operand types for shift: '%s' and '%s'",
                   type_to_string(left_type), type_to_string(right_type));
         return type_error;

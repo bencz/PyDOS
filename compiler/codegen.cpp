@@ -41,6 +41,7 @@ CodeGeneratorBase::CodeGeneratorBase()
     current_func = 0;
     current_alloc = 0;
     verbose = 0;
+    split_count_ = 1;
     error_count = 0;
     label_counter = 0;
     target = 0;
@@ -101,6 +102,11 @@ CodeGeneratorBase::~CodeGeneratorBase()
 void CodeGeneratorBase::set_verbose(int v)
 {
     verbose = v;
+}
+
+void CodeGeneratorBase::set_split(int n)
+{
+    split_count_ = n > 1 ? n : 1;
 }
 
 void CodeGeneratorBase::set_target(int t)
@@ -258,11 +264,26 @@ void CodeGeneratorBase::emit_local_label(int label_id)
 /* External symbol management                                       */
 /* --------------------------------------------------------------- */
 
+/* Own the extern name instead of borrowing the caller's pointer.  Many
+ * callers pass a temporary buffer (func_label, arith_dispatch_func) that
+ * is reused before the name is emitted — harmless in the single-file
+ * path (emitted right after prescan) but corrupting under split output,
+ * where emit_extern_declarations runs again after functions have reused
+ * those buffers.  Names live for the whole run (one-shot compiler). */
+static const char *cg_own_name(const char *name)
+{
+    size_t len = strlen(name) + 1;
+    char *copy = (char *)malloc(len);
+    if (!copy) { fprintf(stderr, "codegen: out of memory (extern name)\n"); exit(1); }
+    memcpy(copy, name, len);
+    return copy;
+}
+
 void CodeGeneratorBase::require_extern(const char *name)
 {
     if (has_extern(name)) return;
     if (num_externs >= externs_cap) grow_externs();
-    externs[num_externs++] = name;
+    externs[num_externs++] = cg_own_name(name);
 }
 
 int CodeGeneratorBase::has_extern(const char *name) const
@@ -294,7 +315,7 @@ void CodeGeneratorBase::require_data_extern(const char *name)
         data_externs = np;
         data_externs_cap = new_cap;
     }
-    data_externs[num_data_externs++] = name;
+    data_externs[num_data_externs++] = cg_own_name(name);
 }
 
 /* --------------------------------------------------------------- */
@@ -524,15 +545,32 @@ const char *CodeGeneratorBase::arith_dispatch_func(IRInstr *instr)
     }
 }
 
-const char *CodeGeneratorBase::runtime_bitwise_func(IROp op)
+const char *CodeGeneratorBase::runtime_bitwise_func(IRInstr *instr)
 {
-    switch (op) {
-        case IR_BITAND: return "pydos_int_bitand_";
-        case IR_BITOR:  return "pydos_int_bitor_";
-        case IR_BITXOR: return "pydos_int_bitxor_";
-        case IR_SHL:    return "pydos_int_shl_";
-        case IR_SHR:    return "pydos_int_shr_";
-        default:        return "pydos_int_bitand_";
+    int kind;
+
+    /* Proven int/bool operands take the direct integer helpers; anything
+     * else goes through the polymorphic entry points that dispatch
+     * __and__/__rand__ etc. on instances. */
+    kind = instr->type_hint ? (int)instr->type_hint->kind : (int)TY_ANY;
+    if (kind == TY_INT || kind == TY_BOOL) {
+        switch (instr->op) {
+            case IR_BITAND: return "pydos_int_bitand_";
+            case IR_BITOR:  return "pydos_int_bitor_";
+            case IR_BITXOR: return "pydos_int_bitxor_";
+            case IR_SHL:    return "pydos_int_shl_";
+            case IR_SHR:    return "pydos_int_shr_";
+            default:        return "pydos_int_bitand_";
+        }
+    }
+
+    switch (instr->op) {
+        case IR_BITAND: return "pydos_obj_bitand_";
+        case IR_BITOR:  return "pydos_obj_bitor_";
+        case IR_BITXOR: return "pydos_obj_bitxor_";
+        case IR_SHL:    return "pydos_obj_lshift_";
+        case IR_SHR:    return "pydos_obj_rshift_";
+        default:        return "pydos_obj_bitand_";
     }
 }
 
@@ -715,7 +753,7 @@ void CodeGeneratorBase::prescan_func(IRFunc *func)
 
         case IR_BITAND: case IR_BITOR: case IR_BITXOR:
         case IR_SHL: case IR_SHR:
-            require_extern(runtime_bitwise_func(ip->op));
+            require_extern(runtime_bitwise_func(ip));
             break;
 
         case IR_NEG:
@@ -1318,6 +1356,13 @@ int CodeGeneratorBase::generate(IRModule *module, const char *output_filename)
         label_counter = max_label + 1;
     }
 
+    /* Flat-386 split output: several small object modules instead of one
+     * large one, because the assembler is roughly quadratic in file
+     * size.  Only the main module is split; libraries and the 8086
+     * segmented model keep the single-file path. */
+    if (split_count_ > 1 && is_main_module && target == 1)
+        return generate_split(module, output_filename);
+
     out = fopen(output_filename, "w");
     if (!out) {
         error_fatal("Cannot open output file: %s", output_filename);
@@ -1333,6 +1378,206 @@ int CodeGeneratorBase::generate(IRModule *module, const char *output_filename)
     fclose(out);
     out = 0;
     return error_count == 0;
+}
+
+/* --------------------------------------------------------------- */
+/* Split code generation helpers                                    */
+/* --------------------------------------------------------------- */
+
+/* PUBLIC for every data symbol so fragment objects can reference it. */
+void CodeGeneratorBase::emit_data_publics()
+{
+    int i;
+    for (i = 0; i < mod->num_constants; i++) {
+        if (mod->constants[i].kind != IRConst::CONST_STR) continue;
+        if (!used_const[i]) continue;
+        char lbl[32];
+        const_label(lbl, sizeof(lbl), i);
+        fprintf(out, "PUBLIC %s\n", lbl);
+    }
+    for (i = 0; i < num_globals; i++)
+        fprintf(out, "PUBLIC %s\n", globals[i].asm_name);
+    for (i = 0; i < num_vtable_globals; i++)
+        fprintf(out, "PUBLIC %s\n", vtable_globals[i].label);
+    for (i = 0; i < num_mn_strings; i++)
+        fprintf(out, "PUBLIC %s\n", mn_strings[i].label);
+}
+
+/* EXTRN for every data symbol.  Flat model: NEAR works for data too.
+ * The assembler accepts EXTRN symbols a fragment never references. */
+void CodeGeneratorBase::emit_data_externs()
+{
+    int i;
+    for (i = 0; i < mod->num_constants; i++) {
+        if (mod->constants[i].kind != IRConst::CONST_STR) continue;
+        if (!used_const[i]) continue;
+        char lbl[32];
+        const_label(lbl, sizeof(lbl), i);
+        fprintf(out, "EXTRN %s:NEAR\n", lbl);
+    }
+    for (i = 0; i < num_globals; i++)
+        fprintf(out, "EXTRN %s:NEAR\n", globals[i].asm_name);
+    for (i = 0; i < num_vtable_globals; i++)
+        fprintf(out, "EXTRN %s:NEAR\n", vtable_globals[i].label);
+    for (i = 0; i < num_mn_strings; i++)
+        fprintf(out, "EXTRN %s:NEAR\n", mn_strings[i].label);
+}
+
+/* The string-length equ constants are compile-time and carry no OMF
+ * symbol, so they are replicated into each fragment that uses them. */
+void CodeGeneratorBase::emit_equ_constants()
+{
+    int i;
+    for (i = 0; i < mod->num_constants; i++) {
+        if (mod->constants[i].kind != IRConst::CONST_STR) continue;
+        if (!used_const[i]) continue;
+        char lbl[32];
+        const_label(lbl, sizeof(lbl), i);
+        fprintf(out, "%s_LEN equ %d\n", lbl, mod->constants[i].str_val.len);
+    }
+}
+
+/* EXTRN for every user function a fragment calls but does not define. */
+void CodeGeneratorBase::emit_proc_externs(int my_group, IRFunc **func_arr,
+                                          const int *group_of, int nfuncs)
+{
+    int i;
+    for (i = 0; i < nfuncs; i++) {
+        if (group_of[i] == my_group) continue;
+        char flbl[128];
+        func_label(flbl, sizeof(flbl), func_arr[i]->name);
+        fprintf(out, "EXTRN %s:NEAR\n", flbl);
+    }
+}
+
+int CodeGeneratorBase::generate_split(IRModule *module,
+                                      const char *output_filename)
+{
+    int nfuncs = 0;
+    IRFunc *f;
+    for (f = mod->functions; f; f = f->next) nfuncs++;
+
+    if (nfuncs == 0)
+        return 0;   /* nothing to split; caller falls back is not reached */
+
+    IRFunc **func_arr = (IRFunc **)malloc(sizeof(IRFunc *) * nfuncs);
+    int *group_of = (int *)malloc(sizeof(int) * nfuncs);
+    long *weight = (long *)malloc(sizeof(long) * nfuncs);
+    if (!func_arr || !group_of || !weight) {
+        error_fatal("Out of memory for split code generation");
+        return 0;
+    }
+
+    /* Weight each function by its instruction count and hand out
+     * contiguous groups of roughly equal total weight, so fragments end
+     * up similar in size.  The init function always lands in group 0
+     * (the base object), next to the data and the entry point. */
+    long total = 0;
+    int idx = 0;
+    for (f = mod->functions; f; f = f->next) {
+        long n = 0;
+        IRInstr *ip;
+        for (ip = f->first; ip; ip = ip->next) n++;
+        func_arr[idx] = f;
+        weight[idx] = n;
+        group_of[idx] = 0;
+        total += n;
+        idx++;
+    }
+
+    long per_group = total / split_count_ + 1;
+    long acc = 0;
+    int cur = 0;
+    for (idx = 0; idx < nfuncs; idx++) {
+        if (func_arr[idx] == mod->init_func) {
+            group_of[idx] = 0;   /* keep init with the base object */
+            continue;
+        }
+        if (acc >= per_group && cur < split_count_ - 1) {
+            cur++;
+            acc = 0;
+        }
+        group_of[idx] = cur;
+        acc += weight[idx];
+    }
+
+    /* emit_func appends to externs[]/data_externs[] as it lowers calls
+     * (including local _main_ function labels, harmless in the single
+     * file since emit_extern_declarations has already run).  Snapshot
+     * the prescan counts and restore them before each fragment's
+     * declarations, so every fragment declares exactly the prescan
+     * extern set — cross-fragment function references are handled
+     * separately by emit_proc_externs. */
+    int base_externs = num_externs;
+    int base_data_externs = num_data_externs;
+
+    int ok = 1;
+    int part;
+    for (part = 0; part < split_count_ && ok; part++) {
+        char path[1024];
+        if (part == 0) {
+            strncpy(path, output_filename, sizeof(path) - 1);
+            path[sizeof(path) - 1] = '\0';
+        } else {
+            /* <base>.asm -> <base>_pN.asm (or append when no .asm) */
+            const char *dot = strrchr(output_filename, '.');
+            int stem = dot ? (int)(dot - output_filename)
+                           : (int)strlen(output_filename);
+            sprintf(path, "%.*s_p%d%s",
+                    stem, output_filename, part,
+                    dot ? dot : ".asm");
+        }
+
+        out = fopen(path, "w");
+        if (!out) {
+            error_fatal("Cannot open split output file: %s", path);
+            ok = 0;
+            break;
+        }
+
+        emit_header();
+        if (part == 0) {
+            emit_data_section();     /* real data lives only here */
+            emit_data_publics();
+        } else {
+            emit_equ_constants();    /* compile-time lengths, replicated */
+        }
+        emit_blank();
+
+        fprintf(out, ".CODE\n");
+        emit_blank();
+        num_externs = base_externs;
+        num_data_externs = base_data_externs;
+        emit_extern_declarations();
+        if (part != 0) emit_data_externs();
+        emit_proc_externs(part, func_arr, group_of, nfuncs);
+        emit_blank();
+
+        for (idx = 0; idx < nfuncs; idx++) {
+            if (group_of[idx] != part) continue;
+            if (func_arr[idx] == mod->init_func) continue;  /* after others */
+            emit_func(func_arr[idx]);
+            emit_blank();
+        }
+        if (part == 0 && mod->init_func) {
+            emit_func(mod->init_func);
+            emit_blank();
+            emit_main_entry();
+        }
+
+        if (error_count == 0) emit_footer();
+        fclose(out);
+        out = 0;
+        if (error_count != 0) ok = 0;
+    }
+
+    if (verbose)
+        printf("Split output: %d object modules\n", split_count_);
+
+    free(func_arr);
+    free(group_of);
+    free(weight);
+    return ok && error_count == 0;
 }
 
 /* --------------------------------------------------------------- */

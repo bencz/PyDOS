@@ -245,86 +245,112 @@ TEST(vtable_override)
 
 TEST(vtable_slot_count)
 {
-    ASSERT_EQ(VSLOT_COUNT, 74);
+    ASSERT_EQ(VSLOT_COUNT, 79);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_set_special_add: __add__ sets VSLOT_ADD                      */
+/* vtable_special_add: __add__ added via add_method is reachable        */
+/* through the special-slot index                                       */
 /* ------------------------------------------------------------------ */
 
-TEST(vtable_set_special_add)
+TEST(vtable_special_add)
 {
     PyDosVTable far *vt;
     vt = pydos_vtable_create();
     ASSERT_NOT_NULL(vt);
 
-    ASSERT_NULL((void far *)vt->slots[VSLOT_ADD]);
+    ASSERT_NULL((void far *)pydos_vtable_get_special(vt, VSLOT_ADD));
+
+    pydos_vtable_add_method(vt,
+        (const char far *)"__add__",
+        (void (far *)(void))dummy_func_a);
+
+    ASSERT_NOT_NULL((void far *)pydos_vtable_get_special(vt, VSLOT_ADD));
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_ADD) ==
+                (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_owns_special(vt, VSLOT_ADD));
+}
+
+/* ------------------------------------------------------------------ */
+/* vtable_special_init: __init__ maps to VSLOT_INIT (slot 0)           */
+/* ------------------------------------------------------------------ */
+
+TEST(vtable_special_init)
+{
+    PyDosVTable far *vt;
+    vt = pydos_vtable_create();
+    ASSERT_NOT_NULL(vt);
+
+    pydos_vtable_add_method(vt,
+        (const char far *)"__init__",
+        (void (far *)(void))dummy_func_b);
+
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_INIT) ==
+                (void (far *)(void))dummy_func_b);
+}
+
+/* ------------------------------------------------------------------ */
+/* vtable_special_iter: __iter__ maps to VSLOT_ITER                    */
+/* ------------------------------------------------------------------ */
+
+TEST(vtable_special_iter)
+{
+    PyDosVTable far *vt;
+    vt = pydos_vtable_create();
+    ASSERT_NOT_NULL(vt);
+
+    pydos_vtable_add_method(vt,
+        (const char far *)"__iter__",
+        (void (far *)(void))dummy_func_c);
+
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_ITER) ==
+                (void (far *)(void))dummy_func_c);
+}
+
+/* ------------------------------------------------------------------ */
+/* vtable_set_special_needs_method: set_special only tags an existing  */
+/* method entry; on an empty vtable it is a safe no-op                 */
+/* ------------------------------------------------------------------ */
+
+TEST(vtable_set_special_needs_method)
+{
+    PyDosVTable far *vt;
+    vt = pydos_vtable_create();
+    ASSERT_NOT_NULL(vt);
 
     pydos_vtable_set_special(vt,
         (const char far *)"__add__",
         (void (far *)(void))dummy_func_a);
 
-    ASSERT_NOT_NULL((void far *)vt->slots[VSLOT_ADD]);
-    ASSERT_TRUE(vt->slots[VSLOT_ADD] == (void (far *)(void))dummy_func_a);
+    ASSERT_EQ(vt->method_count, 0);
+    ASSERT_NULL((void far *)pydos_vtable_get_special(vt, VSLOT_ADD));
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_set_special_init: __init__ sets VSLOT_INIT (slot 0)          */
+/* vtable_special_unknown: non-dunder method sets no special slot      */
 /* ------------------------------------------------------------------ */
 
-TEST(vtable_set_special_init)
-{
-    PyDosVTable far *vt;
-    vt = pydos_vtable_create();
-    ASSERT_NOT_NULL(vt);
-
-    pydos_vtable_set_special(vt,
-        (const char far *)"__init__",
-        (void (far *)(void))dummy_func_b);
-
-    ASSERT_TRUE(vt->slots[VSLOT_INIT] == (void (far *)(void))dummy_func_b);
-}
-
-/* ------------------------------------------------------------------ */
-/* vtable_set_special_iter: __iter__ sets VSLOT_ITER                   */
-/* ------------------------------------------------------------------ */
-
-TEST(vtable_set_special_iter)
-{
-    PyDosVTable far *vt;
-    vt = pydos_vtable_create();
-    ASSERT_NOT_NULL(vt);
-
-    pydos_vtable_set_special(vt,
-        (const char far *)"__iter__",
-        (void (far *)(void))dummy_func_c);
-
-    ASSERT_TRUE(vt->slots[VSLOT_ITER] == (void (far *)(void))dummy_func_c);
-}
-
-/* ------------------------------------------------------------------ */
-/* vtable_set_special_unknown: non-dunder doesn't set any slot         */
-/* ------------------------------------------------------------------ */
-
-TEST(vtable_set_special_unknown)
+TEST(vtable_special_unknown)
 {
     PyDosVTable far *vt;
     int i;
     vt = pydos_vtable_create();
     ASSERT_NOT_NULL(vt);
 
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"regular_method",
         (void (far *)(void))dummy_func_a);
 
-    /* No slot should be set */
+    ASSERT_EQ(vt->method_count, 1);
+    /* No special slot should resolve */
     for (i = 0; i < VSLOT_COUNT; i++) {
-        ASSERT_NULL((void far *)vt->slots[i]);
+        ASSERT_NULL((void far *)pydos_vtable_get_special(vt, i));
+        ASSERT_TRUE(!pydos_vtable_owns_special(vt, i));
     }
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_add_method_sets_slot: add_method sets dunder slot             */
+/* vtable_add_method_sets_slot: add_method tags dunder entries          */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_add_method_sets_slot)
@@ -338,11 +364,13 @@ TEST(vtable_add_method_sets_slot)
         (void (far *)(void))dummy_func_a);
 
     ASSERT_EQ(vt->method_count, 1);
-    ASSERT_TRUE(vt->slots[VSLOT_STR] == (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_STR) ==
+                (void (far *)(void))dummy_func_a);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_inherit_slots: child inherits parent's slots                 */
+/* vtable_inherit_slots: child resolves parent's specials via the MRO  */
+/* chain (specials are not copied into the child)                      */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_inherit_slots)
@@ -352,10 +380,10 @@ TEST(vtable_inherit_slots)
 
     parent = pydos_vtable_create();
     ASSERT_NOT_NULL(parent);
-    pydos_vtable_set_special(parent,
+    pydos_vtable_add_method(parent,
         (const char far *)"__eq__",
         (void (far *)(void))dummy_func_a);
-    pydos_vtable_set_special(parent,
+    pydos_vtable_add_method(parent,
         (const char far *)"__len__",
         (void (far *)(void))dummy_func_b);
 
@@ -363,13 +391,19 @@ TEST(vtable_inherit_slots)
     ASSERT_NOT_NULL(child);
     pydos_vtable_inherit(child, parent);
 
-    /* Child should have inherited both slots */
-    ASSERT_TRUE(child->slots[VSLOT_EQ] == (void (far *)(void))dummy_func_a);
-    ASSERT_TRUE(child->slots[VSLOT_LEN] == (void (far *)(void))dummy_func_b);
+    /* Child resolves both specials through its MRO... */
+    ASSERT_TRUE(pydos_vtable_get_special(child, VSLOT_EQ) ==
+                (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_get_special(child, VSLOT_LEN) ==
+                (void (far *)(void))dummy_func_b);
+    /* ...but does not own them itself */
+    ASSERT_TRUE(!pydos_vtable_owns_special(child, VSLOT_EQ));
+    ASSERT_TRUE(!pydos_vtable_owns_special(child, VSLOT_LEN));
+    ASSERT_TRUE(pydos_vtable_owns_special(parent, VSLOT_EQ));
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_inherit_no_override: child's existing slot not overwritten   */
+/* vtable_inherit_no_override: child's own special wins over the MRO   */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_inherit_no_override)
@@ -379,24 +413,25 @@ TEST(vtable_inherit_no_override)
 
     parent = pydos_vtable_create();
     ASSERT_NOT_NULL(parent);
-    pydos_vtable_set_special(parent,
+    pydos_vtable_add_method(parent,
         (const char far *)"__add__",
         (void (far *)(void))dummy_func_a);
 
     child = pydos_vtable_create();
     ASSERT_NOT_NULL(child);
     /* Set child's __add__ first */
-    pydos_vtable_set_special(child,
+    pydos_vtable_add_method(child,
         (const char far *)"__add__",
         (void (far *)(void))dummy_func_child);
     pydos_vtable_inherit(child, parent);
 
     /* Child's version should remain */
-    ASSERT_TRUE(child->slots[VSLOT_ADD] == (void (far *)(void))dummy_func_child);
+    ASSERT_TRUE(pydos_vtable_get_special(child, VSLOT_ADD) ==
+                (void (far *)(void))dummy_func_child);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_inplace_slots: __iadd__ etc set correct slots                */
+/* vtable_inplace_slots: __iadd__ etc map to the correct slots         */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_inplace_slots)
@@ -405,19 +440,21 @@ TEST(vtable_inplace_slots)
     vt = pydos_vtable_create();
     ASSERT_NOT_NULL(vt);
 
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__iadd__",
         (void (far *)(void))dummy_func_a);
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__imul__",
         (void (far *)(void))dummy_func_b);
 
-    ASSERT_TRUE(vt->slots[VSLOT_IADD] == (void (far *)(void))dummy_func_a);
-    ASSERT_TRUE(vt->slots[VSLOT_IMUL] == (void (far *)(void))dummy_func_b);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_IADD) ==
+                (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_IMUL) ==
+                (void (far *)(void))dummy_func_b);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_reflected_slots: __radd__ etc set correct slots              */
+/* vtable_reflected_slots: __radd__ etc map to the correct slots       */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_reflected_slots)
@@ -426,23 +463,26 @@ TEST(vtable_reflected_slots)
     vt = pydos_vtable_create();
     ASSERT_NOT_NULL(vt);
 
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__radd__",
         (void (far *)(void))dummy_func_a);
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__rpow__",
         (void (far *)(void))dummy_func_b);
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__rtruediv__",
         (void (far *)(void))dummy_func_c);
 
-    ASSERT_TRUE(vt->slots[VSLOT_RADD] == (void (far *)(void))dummy_func_a);
-    ASSERT_TRUE(vt->slots[VSLOT_RPOW] == (void (far *)(void))dummy_func_b);
-    ASSERT_TRUE(vt->slots[VSLOT_RTRUEDIV] == (void (far *)(void))dummy_func_c);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_RADD) ==
+                (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_RPOW) ==
+                (void (far *)(void))dummy_func_b);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_RTRUEDIV) ==
+                (void (far *)(void))dummy_func_c);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_matmul_slot: __matmul__ sets VSLOT_MATMUL                    */
+/* vtable_matmul_slot: __matmul__ maps to VSLOT_MATMUL                 */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_matmul_slot)
@@ -451,19 +491,21 @@ TEST(vtable_matmul_slot)
     vt = pydos_vtable_create();
     ASSERT_NOT_NULL(vt);
 
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__matmul__",
         (void (far *)(void))dummy_func_a);
-    pydos_vtable_set_special(vt,
+    pydos_vtable_add_method(vt,
         (const char far *)"__rmatmul__",
         (void (far *)(void))dummy_func_b);
 
-    ASSERT_TRUE(vt->slots[VSLOT_MATMUL] == (void (far *)(void))dummy_func_a);
-    ASSERT_TRUE(vt->slots[VSLOT_RMATMUL] == (void (far *)(void))dummy_func_b);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_MATMUL) ==
+                (void (far *)(void))dummy_func_a);
+    ASSERT_TRUE(pydos_vtable_get_special(vt, VSLOT_RMATMUL) ==
+                (void (far *)(void))dummy_func_b);
 }
 
 /* ------------------------------------------------------------------ */
-/* vtable_all_slots_zero: freshly created vtable has all slots null    */
+/* vtable_all_slots_zero: freshly created vtable resolves no specials  */
 /* ------------------------------------------------------------------ */
 
 TEST(vtable_all_slots_zero)
@@ -474,7 +516,7 @@ TEST(vtable_all_slots_zero)
     ASSERT_NOT_NULL(vt);
 
     for (i = 0; i < VSLOT_COUNT; i++) {
-        ASSERT_NULL((void far *)vt->slots[i]);
+        ASSERT_NULL((void far *)pydos_vtable_get_special(vt, i));
     }
 }
 
@@ -576,10 +618,11 @@ void run_vtb_tests(void)
     RUN(vtable_inherit);
     RUN(vtable_override);
     RUN(vtable_slot_count);
-    RUN(vtable_set_special_add);
-    RUN(vtable_set_special_init);
-    RUN(vtable_set_special_iter);
-    RUN(vtable_set_special_unknown);
+    RUN(vtable_special_add);
+    RUN(vtable_special_init);
+    RUN(vtable_special_iter);
+    RUN(vtable_set_special_needs_method);
+    RUN(vtable_special_unknown);
     RUN(vtable_add_method_sets_slot);
     RUN(vtable_inherit_slots);
     RUN(vtable_inherit_no_override);

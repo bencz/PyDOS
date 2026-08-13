@@ -12,6 +12,6 @@ async def gather(*coroutines):
 async def sleep(delay, result=None):
     if delay > 0:
         milliseconds = int(delay * 1000)
-        _pydos_tui_delay_ms(milliseconds)
+        _pydos_tui_sleep_ms(milliseconds)
     await None
     return result

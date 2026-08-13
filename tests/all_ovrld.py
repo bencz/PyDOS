@@ -1,5 +1,5 @@
-import math
-import operator
+# Catalog of every overloadable dunder the compiler supports.  Compile-only
+# coverage: run_mac.sh builds it for both targets; there is no golden output.
 
 
 class AllOverloads:
@@ -187,13 +187,19 @@ class AllOverloads:
         return AllOverloads(round(self.value, ndigits) if ndigits else round(self.value))
 
     def __floor__(self):
-        return math.floor(self.value)
+        whole = int(self.value)
+        if self.value < whole:
+            whole -= 1
+        return whole
 
     def __ceil__(self):
-        return math.ceil(self.value)
+        whole = int(self.value)
+        if self.value > whole:
+            whole += 1
+        return whole
 
     def __trunc__(self):
-        return math.trunc(self.value)
+        return int(self.value)
 
     # =========================
     # Container Protocol

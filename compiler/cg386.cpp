@@ -233,46 +233,55 @@ void CodeGenerator386::emit_code_section()
         emit_blank();
     }
 
-    /* ---- main entry point (386 protected mode, only for main module) ----
-     * 32-bit clib3s startup calls "main" (no underscore),
-     * unlike 16-bit clibl which calls "main_" (cdecl *_ naming). */
-    if (is_main_module) {
-        char init_label[128];
-        func_label(init_label, sizeof(init_label), "__init__");
+    emit_main_entry();
+}
 
-        fprintf(out, "PUBLIC main\n");
-        fprintf(out, "main PROC NEAR\n");
-        emit_line("push ebp");
-        emit_line("mov  ebp, esp");
+/* ================================================================= */
+/* emit_main_entry                                                    */
+/* ================================================================= */
+
+void CodeGenerator386::emit_main_entry()
+{
+    /* 386 protected mode, only for the main module.  32-bit clib3s
+     * startup calls "main" (no underscore), unlike 16-bit clibl which
+     * calls "main_" (cdecl *_ naming). */
+    if (!is_main_module) return;
+
+    char init_label[128];
+    func_label(init_label, sizeof(init_label), "__init__");
+
+    fprintf(out, "PUBLIC main\n");
+    fprintf(out, "main PROC NEAR\n");
+    emit_line("push ebp");
+    emit_line("mov  ebp, esp");
+    emit_blank();
+
+    emit_comment("init runtime");
+    emit_line("call pydos_rt_init_");
+    emit_blank();
+
+    emit_comment("call __init__");
+    emit_line("call %s", init_label);
+    emit_blank();
+
+    /* Call user-specified entry function (--entry) */
+    if (has_main_func && entry_func) {
+        char entry_label[128];
+        func_label(entry_label, sizeof(entry_label), entry_func);
+        emit_comment("call entry: %s()", entry_func);
+        emit_line("call %s", entry_label);
         emit_blank();
-
-        emit_comment("init runtime");
-        emit_line("call pydos_rt_init_");
-        emit_blank();
-
-        emit_comment("call __init__");
-        emit_line("call %s", init_label);
-        emit_blank();
-
-        /* Call user-specified entry function (--entry) */
-        if (has_main_func && entry_func) {
-            char entry_label[128];
-            func_label(entry_label, sizeof(entry_label), entry_func);
-            emit_comment("call entry: %s()", entry_func);
-            emit_line("call %s", entry_label);
-            emit_blank();
-        }
-
-        emit_comment("shutdown runtime");
-        emit_line("call pydos_rt_shutdown_");
-        emit_blank();
-
-        emit_comment("exit to DOS");
-        emit_line("mov  eax, 4C00h");
-        emit_line("int  21h");
-
-        fprintf(out, "main ENDP\n");
     }
+
+    emit_comment("shutdown runtime");
+    emit_line("call pydos_rt_shutdown_");
+    emit_blank();
+
+    emit_comment("exit to DOS");
+    emit_line("mov  eax, 4C00h");
+    emit_line("int  21h");
+
+    fprintf(out, "main ENDP\n");
 }
 
 /* ================================================================= */
@@ -821,7 +830,7 @@ void CodeGenerator386::emit_inplace(IRInstr *instr)
 
 void CodeGenerator386::emit_bitwise(IRInstr *instr)
 {
-    const char *func_name = runtime_bitwise_func(instr->op);
+    const char *func_name = runtime_bitwise_func(instr);
 
     emit_comment("BITWISE %s t%d, t%d -> t%d",
                  irop_name(instr->op), instr->src1, instr->src2, instr->dest);

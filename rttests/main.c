@@ -7,10 +7,24 @@
 #include <stdio.h>
 #include "testfw.h"
 #include "../runtime/pdos_rt.h"
+#include "../runtime/pdos_exc.h"
 
 /* Global counters */
 int tf_pass = 0;
 int tf_fail = 0;
+
+/* Exception-isolation check used by the RUN macro: a test that triggers a
+ * runtime error path must assert it and consume it with pydos_exc_clear().
+ * A pending exception at test end is a test bug — report it and clear so
+ * the leak cannot poison later tests. */
+int tf_exc_leaked(void)
+{
+    if (pydos_exc_pending()) {
+        pydos_exc_clear();
+        return 1;
+    }
+    return 0;
+}
 
 /* Test suite runners (defined in t_*.c files) */
 extern void run_obj_tests(void);
@@ -41,6 +55,7 @@ extern void run_fzs_tests(void);
 extern void run_cpx_tests(void);
 extern void run_bya_tests(void);
 extern void run_vm_tests(void);
+extern void run_tui_tests(void);
 
 int main(void)
 {
@@ -79,6 +94,7 @@ int main(void)
     run_cpx_tests();
     run_bya_tests();
     run_vm_tests();
+    run_tui_tests();
 
     /* Summary */
     printf("\n========================\n");

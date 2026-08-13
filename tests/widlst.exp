@@ -1,0 +1,21 @@
+alpha      ^
+bravo      #
+charlie    .
+delta      v
+--
+bravo      ^
+charlie    #
+delta      .
+echo       v
+4 1
+--
+echo       ^
+foxtrot    .
+golf       #
+hotel      v
+7 4 [7]
+--
+3 4
+[1, 2, 3, 4, 7, 3]
+5
+[7, 5]

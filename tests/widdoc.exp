@@ -1,0 +1,20 @@
+3 0 0 False
+alpha! True
+alpha!
+inserted
+bravo
+charlie
+--
+alpha!inserted 0
+alpha!insertedbravo
+True 1 0
+False False
+True SUPERlie
+0
+1
+|SUPER   lie|
+|zzPER   lie|
+11
+2
+11
+abcd 0 2

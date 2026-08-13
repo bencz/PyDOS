@@ -40,6 +40,8 @@ public:
     virtual void emit_footer();
     virtual void emit_data_section();
     virtual void emit_code_section();
+    virtual void emit_main_entry();
+    void emit_main_entry_seg(int *code_segment);
     virtual void emit_extern_declarations();
 
     /* --------------------------------------------------------------- */

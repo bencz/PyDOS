@@ -72,6 +72,13 @@ public:
      * This is the main entry point: prescan, header, data, code, footer. */
     int generate(IRModule *mod, const char *output_filename);
 
+    /* Split code generation across N object modules (flat 386 only).
+     * The assembler is roughly quadratic in file size, so a single big
+     * program (the whole TUI library linked in) times out; N smaller
+     * .asm files each assemble in a fraction of a second and the linker
+     * joins them.  1 (the default) keeps the single-file behavior. */
+    void set_split(int n);
+
     /* Enable verbose output (source comments in assembly) */
     void set_verbose(int v);
 
@@ -211,7 +218,7 @@ protected:
     const char *runtime_arith_func(IROp op);
     const char *arith_dispatch_func(IRInstr *instr);
     const char *runtime_cmp_func(IROp op);
-    const char *runtime_bitwise_func(IROp op);
+    const char *runtime_bitwise_func(IRInstr *instr);
     const char *runtime_unary_func(IROp op);
     const char *builtin_asm_name(const char *py_name);
 
@@ -254,6 +261,27 @@ protected:
     virtual void emit_data_section() = 0;
     virtual void emit_code_section() = 0;
     virtual void emit_extern_declarations() = 0;
+
+    /* The program's DOS entry point (runtime init, __init__, shutdown).
+     * Split off from emit_code_section so split generation can place it
+     * in the base object alongside the data. */
+    virtual void emit_main_entry() = 0;
+
+    /* --------------------------------------------------------------- */
+    /* Split code generation (flat 386)                                 */
+    /* --------------------------------------------------------------- */
+    int split_count_;
+    int generate_split(IRModule *module, const char *output_filename);
+    /* PUBLIC / EXTRN for every data symbol (strings, globals, vtables,
+     * method-name strings), and the length equ constants replicated into
+     * each fragment.  Data lives only in the base object; fragments
+     * reference it by EXTRN. */
+    void emit_data_publics();
+    void emit_data_externs();
+    void emit_equ_constants();
+    /* EXTRN for every user function not defined in fragment `my_group`. */
+    void emit_proc_externs(int my_group, IRFunc **func_arr,
+                           const int *group_of, int nfuncs);
 
     /* --------------------------------------------------------------- */
     /* Function generation                                              */

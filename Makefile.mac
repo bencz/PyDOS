@@ -47,6 +47,7 @@ COMP_SRCS = compiler/main.cpp \
             compiler/piresc.cpp \
             compiler/pirspc.cpp \
             compiler/modpath.cpp \
+            compiler/astdce.cpp \
             compiler/modscan.cpp \
             compiler/stdscan.cpp \
             compiler/pirsrlz.cpp \
@@ -58,6 +59,7 @@ COMP_DEPS = $(COMP_OBJS:.o=.d)
 
 # ---- Runtime sources ----
 RT_SRCS = runtime/pdos_obj.c \
+          runtime/pdos_ops.c \
           runtime/pdos_mon.c \
           runtime/pdos_mem.c \
           runtime/pdos_gc.c \
@@ -120,7 +122,8 @@ TEST_SRCS = rttests/main.c \
             rttests/t_cpx.c \
             rttests/t_bya.c \
             rttests/t_excg.c \
-            rttests/t_vm.c
+            rttests/t_vm.c \
+            rttests/t_tui.c
 
 TEST_OBJS = $(patsubst rttests/%.c,$(TESTOBJDIR)/%.o,$(TEST_SRCS))
 TEST_DEPS = $(TEST_OBJS:.o=.d)
@@ -204,6 +207,12 @@ $(BINDIR)/test-modpath: compiler/tests/t_modpth.cpp compiler/modpath.cpp compile
 
 test-modpath: $(BINDIR)/test-modpath
 	./$(BINDIR)/test-modpath
+
+$(BINDIR)/test-astdce: compiler/tests/t_astdce.cpp compiler/astdce.cpp compiler/astdce.h compiler/ast.cpp compiler/ast.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) -Icompiler -o $@ compiler/tests/t_astdce.cpp compiler/astdce.cpp compiler/ast.cpp
+
+test-astdce: $(BINDIR)/test-astdce
+	./$(BINDIR)/test-astdce
 
 # ---- Release packaging ----
 print-compiler-sources:

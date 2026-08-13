@@ -610,13 +610,6 @@ call runone.bat dclass312 %MODE%
 if exist _TESTOK echo dclass312>>_PASSED.TMP
 if not exist _TESTOK echo dclass312>>_FAILED.TMP
 
-call runone.bat tui312 %MODE%
-if exist _TESTOK echo tui312>>_PASSED.TMP
-if not exist _TESTOK echo tui312>>_FAILED.TMP
-call runone.bat tuiwid %MODE%
-if exist _TESTOK echo tuiwid>>_PASSED.TMP
-if not exist _TESTOK echo tuiwid>>_FAILED.TMP
-
 call runone.bat seqops %MODE%
 if exist _TESTOK echo seqops>>_PASSED.TMP
 if not exist _TESTOK echo seqops>>_FAILED.TMP
@@ -776,6 +769,102 @@ if not exist _TESTOK echo gcstress>>_FAILED.TMP
 call runone.bat linq %MODE%
 if exist _TESTOK echo linq>>_PASSED.TMP
 if not exist _TESTOK echo linq>>_FAILED.TMP
+
+call runone.bat dce_bas %MODE%
+if exist _TESTOK echo dce_bas>>_PASSED.TMP
+if not exist _TESTOK echo dce_bas>>_FAILED.TMP
+
+call runone.bat dce_vtb %MODE%
+if exist _TESTOK echo dce_vtb>>_PASSED.TMP
+if not exist _TESTOK echo dce_vtb>>_FAILED.TMP
+
+call runone.bat geom312 %MODE%
+if exist _TESTOK echo geom312>>_PASSED.TMP
+if not exist _TESTOK echo geom312>>_FAILED.TMP
+
+call runone.bat buf312 %MODE%
+if exist _TESTOK echo buf312>>_PASSED.TMP
+if not exist _TESTOK echo buf312>>_FAILED.TMP
+
+call runone.bat key312 %MODE%
+if exist _TESTOK echo key312>>_PASSED.TMP
+if not exist _TESTOK echo key312>>_FAILED.TMP
+
+call runone.bat evt312 %MODE%
+if exist _TESTOK echo evt312>>_PASSED.TMP
+if not exist _TESTOK echo evt312>>_FAILED.TMP
+
+call runone.bat zzchain %MODE%
+if exist _TESTOK echo zzchain>>_PASSED.TMP
+if not exist _TESTOK echo zzchain>>_FAILED.TMP
+
+call runone.bat starkw %MODE%
+if exist _TESTOK echo starkw>>_PASSED.TMP
+if not exist _TESTOK echo starkw>>_FAILED.TMP
+
+call runone.bat thm312 %MODE%
+if exist _TESTOK echo thm312>>_PASSED.TMP
+if not exist _TESTOK echo thm312>>_FAILED.TMP
+
+call runone.bat wid312 %MODE%
+if exist _TESTOK echo wid312>>_PASSED.TMP
+if not exist _TESTOK echo wid312>>_FAILED.TMP
+
+call runone.bat lay312 %MODE%
+if exist _TESTOK echo lay312>>_PASSED.TMP
+if not exist _TESTOK echo lay312>>_FAILED.TMP
+
+call runone.bat widbtn %MODE%
+if exist _TESTOK echo widbtn>>_PASSED.TMP
+if not exist _TESTOK echo widbtn>>_FAILED.TMP
+
+call runone.bat widinp %MODE%
+if exist _TESTOK echo widinp>>_PASSED.TMP
+if not exist _TESTOK echo widinp>>_FAILED.TMP
+
+call runone.bat widlst %MODE%
+if exist _TESTOK echo widlst>>_PASSED.TMP
+if not exist _TESTOK echo widlst>>_FAILED.TMP
+
+call runone.bat widtxa %MODE%
+if exist _TESTOK echo widtxa>>_PASSED.TMP
+if not exist _TESTOK echo widtxa>>_FAILED.TMP
+
+call runone.bat app312 %MODE%
+if exist _TESTOK echo app312>>_PASSED.TMP
+if not exist _TESTOK echo app312>>_FAILED.TMP
+
+call runone.bat widmnu %MODE%
+if exist _TESTOK echo widmnu>>_PASSED.TMP
+if not exist _TESTOK echo widmnu>>_FAILED.TMP
+
+call runone.bat widlg %MODE%
+if exist _TESTOK echo widlg>>_PASSED.TMP
+if not exist _TESTOK echo widlg>>_FAILED.TMP
+
+call runone.bat widfdl %MODE%
+if exist _TESTOK echo widfdl>>_PASSED.TMP
+if not exist _TESTOK echo widfdl>>_FAILED.TMP
+
+call runone.bat editapp %MODE%
+if exist _TESTOK echo editapp>>_PASSED.TMP
+if not exist _TESTOK echo editapp>>_FAILED.TMP
+
+call runone.bat tuiprim %MODE%
+if exist _TESTOK echo tuiprim>>_PASSED.TMP
+if not exist _TESTOK echo tuiprim>>_FAILED.TMP
+
+call runone.bat widrad %MODE%
+if exist _TESTOK echo widrad>>_PASSED.TMP
+if not exist _TESTOK echo widrad>>_FAILED.TMP
+
+call runone.bat widtab %MODE%
+if exist _TESTOK echo widtab>>_PASSED.TMP
+if not exist _TESTOK echo widtab>>_FAILED.TMP
+
+call runone.bat widdoc %MODE%
+if exist _TESTOK echo widdoc>>_PASSED.TMP
+if not exist _TESTOK echo widdoc>>_FAILED.TMP
 
 echo.
 echo === Passed ===

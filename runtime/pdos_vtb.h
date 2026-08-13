@@ -90,6 +90,13 @@ typedef enum VSlotIndex {
     VSLOT_LSHIFT,
     VSLOT_RSHIFT,
 
+    /* Reflected bitwise (5) */
+    VSLOT_RAND,
+    VSLOT_ROR,
+    VSLOT_RXOR,
+    VSLOT_RLSHIFT,
+    VSLOT_RRSHIFT,
+
     /* Container (8) */
     VSLOT_LEN,
     VSLOT_GETITEM,

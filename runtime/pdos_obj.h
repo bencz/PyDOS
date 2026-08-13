@@ -498,6 +498,14 @@ PyDosObj far * PYDOS_API pydos_obj_truediv(PyDosObj far *a, PyDosObj far *b);
 PyDosObj far * PYDOS_API pydos_obj_mod(PyDosObj far *a, PyDosObj far *b);
 PyDosObj far * PYDOS_API pydos_obj_pow(PyDosObj far *a, PyDosObj far *b);
 PyDosObj far * PYDOS_API pydos_obj_matmul(PyDosObj far *a, PyDosObj far *b);
+
+/* Instance dunder dispatch (left slot, then reflected right slot with
+ * swapped operands; NotImplemented falls through).  Shared with the
+ * bitwise/shift family in pdos_ops.c. */
+PyDosObj far * PYDOS_API pydos_obj_binary_dispatch(PyDosObj far *left,
+                                                   PyDosObj far *right,
+                                                   int left_slot,
+                                                   int right_slot);
 PyDosObj far * PYDOS_API pydos_obj_inplace(PyDosObj far *a, PyDosObj far *b,
                                             int op);
 

@@ -45,6 +45,7 @@
 #include "pirmrg.h"
 #include "modpath.h"
 #include "execmode.h"
+#include "astdce.h"
 #include "pbclwr.h"
 
 /* --------------------------------------------------------------- */
@@ -154,7 +155,13 @@ static void dump_tokens(const char *filename)
 /* Source-module linker                                             */
 /* --------------------------------------------------------------- */
 
-static Lexer *source_module_lexers[64];
+/* Upper bound on modules linked into one program.  Hitting it is a hard
+ * error: silently skipping a module produced executables with missing
+ * code, and the paired lexer table below must never be smaller than the
+ * set of linked modules (AST token strings borrow Lexer storage). */
+#define MAX_LINKED_MODULES 256
+
+static Lexer *source_module_lexers[MAX_LINKED_MODULES];
 static int source_module_lexer_count = 0;
 
 enum SourceRequirement {
@@ -243,8 +250,15 @@ static ASTNode *load_source_module(const char *module_name,
     module_ast = module_parser->parse_module();
     if (module_parser->get_error_count() > 0) module_ast = 0;
     delete module_parser;
-    if (module_ast && source_module_lexer_count < 64) {
-        /* AST token strings currently borrow storage from Lexer. */
+    if (module_ast) {
+        /* AST token strings currently borrow storage from Lexer, so the
+         * lexer of every parsed module must stay alive.  Deleting it here
+         * (the old behavior when the table overflowed) left the returned
+         * AST pointing into freed memory. */
+        if (source_module_lexer_count >= MAX_LINKED_MODULES) {
+            error_fatal("Too many linked modules (limit %d)",
+                        MAX_LINKED_MODULES);
+        }
         source_module_lexers[source_module_lexer_count++] = module_lexer;
     } else {
         delete module_lexer;
@@ -272,7 +286,10 @@ static void link_source_imports(ASTNode **body_ptr,
         module_name = stmt->data.import_from.module;
         if (!module_name || linked_module_seen(module_name, seen, *seen_count))
             continue;
-        if (*seen_count >= 64) continue;
+        if (*seen_count >= MAX_LINKED_MODULES) {
+            error_fatal("Too many linked modules at 'from %s import ...' "
+                        "(limit %d)", module_name, MAX_LINKED_MODULES);
+        }
         strncpy(seen[*seen_count], module_name, 127);
         seen[*seen_count][127] = '\0';
         (*seen_count)++;
@@ -297,6 +314,48 @@ static void link_source_imports(ASTNode **body_ptr,
     }
 }
 
+/* 'from x import y as z' binds z in the importing namespace.  The import
+ * statement itself compiles to nothing (linking is by source), so the
+ * binding is materialized here as an explicit top-level assignment
+ * 'z = y' spliced right after each import — the flattened-namespace
+ * equivalent of what CPython does.  Without it, call sites loaded a
+ * never-initialized global named after the alias. */
+static void bind_import_aliases(ASTNode *body)
+{
+    ASTNode *stmt;
+
+    for (stmt = body; stmt; stmt = stmt->next) {
+        ASTNode *name;
+        ASTNode *last_binding = stmt;
+        if (stmt->kind != AST_IMPORT_FROM) continue;
+        for (name = stmt->data.import_from.names; name; name = name->next) {
+            ASTNode *target;
+            ASTNode *value;
+            ASTNode *assign;
+            if (name->kind != AST_IMPORT_NAME) continue;
+            if (!name->data.import_name.alias ||
+                !name->data.import_name.imported_name)
+                continue;
+            if (strcmp(name->data.import_name.alias,
+                       name->data.import_name.imported_name) == 0)
+                continue;
+
+            target = ast_alloc(AST_NAME, stmt->line, stmt->col);
+            target->data.name.id = name->data.import_name.alias;
+            value = ast_alloc(AST_NAME, stmt->line, stmt->col);
+            value->data.name.id = name->data.import_name.imported_name;
+            assign = ast_alloc(AST_ASSIGN, stmt->line, stmt->col);
+            assign->data.assign.targets = target;
+            assign->data.assign.value = value;
+
+            assign->next = last_binding->next;
+            last_binding->next = assign;
+            last_binding = assign;
+        }
+        stmt = last_binding;
+    }
+}
+
 static int prepend_source_module(ASTNode **body_ptr, const char *module_name,
                                  const char **search_paths,
                                  int num_search_paths,
@@ -308,7 +367,10 @@ static int prepend_source_module(ASTNode **body_ptr, const char *module_name,
     ASTNode *tail;
 
     if (linked_module_seen(module_name, seen, *seen_count)) return 1;
-    if (*seen_count >= 64) return 0;
+    if (*seen_count >= MAX_LINKED_MODULES) {
+        error_fatal("Too many linked modules at builtin module '%s' "
+                    "(limit %d)", module_name, MAX_LINKED_MODULES);
+    }
 
     module_ast = load_source_module(module_name, search_paths,
                                     num_search_paths, requirements);
@@ -346,6 +408,7 @@ int main(int argc, char *argv[])
     int dump_types;
     int dump_escape;
     int no_pir_opt;
+    int split_count;
     const char *module_name;
     int is_main_module;
     const char *entry_func;
@@ -367,6 +430,7 @@ int main(int argc, char *argv[])
     dump_types = 0;
     dump_escape = 0;
     no_pir_opt = 0;
+    split_count = 1;
     module_name = 0;
     is_main_module = 1;
     entry_func = 0;
@@ -406,6 +470,9 @@ int main(int argc, char *argv[])
             dump_types = 1;
         } else if (strcmp(argv[i], "--dump-escape") == 0) {
             dump_escape = 1;
+        } else if (strcmp(argv[i], "--split") == 0 && i + 1 < argc) {
+            split_count = atoi(argv[++i]);
+            if (split_count < 1) split_count = 1;
         } else if (strcmp(argv[i], "--no-pir-opt") == 0) {
             no_pir_opt = 1;
         } else if (strcmp(argv[i], "--no-sccp") == 0) {
@@ -430,6 +497,8 @@ int main(int argc, char *argv[])
             piropt_skip_func_dedup = 1;
         } else if (strcmp(argv[i], "--no-hygiene") == 0) {
             piropt_skip_hygiene = 1;
+        } else if (strcmp(argv[i], "--no-dead-code") == 0) {
+            astdce_skip = 1;
         } else if (strcmp(argv[i], "-m") == 0 && i + 1 < argc) {
             module_name = argv[++i];
             /* -m just overrides auto-derived name; use -L for library mode */
@@ -610,14 +679,38 @@ int main(int argc, char *argv[])
     }
 
     if (module_ast && module_ast->kind == AST_MODULE) {
-        char linked_modules[64][128];
+        /* 256 entries * 128 bytes = 32 KB: too large for the stack of the
+         * DOS-hosted compiler build, so the table lives on the heap. */
+        char (*linked_modules)[128];
         int linked_module_count = 0;
         unsigned int requirements = scan_source_requirements(input_file);
-        memset(linked_modules, 0, sizeof(linked_modules));
+        /* Everything link_source_imports() prepends before this original
+         * head belongs to linked modules — the boundary the dead-code
+         * pass uses to tell linked code from the user's program. */
+        ASTNode *user_body = module_ast->data.module.body;
+        linked_modules = (char (*)[128])malloc(
+            (size_t)MAX_LINKED_MODULES * 128);
+        if (!linked_modules)
+            error_fatal("Out of memory for the linked-module table");
+        memset(linked_modules, 0, (size_t)MAX_LINKED_MODULES * 128);
         link_source_imports(&module_ast->data.module.body,
                             search_paths, num_search_paths,
                             linked_modules, &linked_module_count,
                             &requirements);
+
+        /* Materialize alias bindings before DCE runs: the injected
+         * 'z = y' assignments both make aliases work at runtime and act
+         * as conservative liveness roots for their originals. */
+        bind_import_aliases(module_ast->data.module.body);
+
+        /* Drop linked definitions the program never reaches, before the
+         * requirement modules below are prepended (they stay exempt: the
+         * compiler may invoke property/open/... implicitly).  Library
+         * builds keep everything — every export is a potential root. */
+        if (is_main_module && linked_module_count > 0) {
+            ast_dce_run(&module_ast->data.module.body, user_body,
+                        entry_func, verbose);
+        }
 
         /* Link ordinary Python open() first.  Its TextFile class uses
          * property, so the descriptor module discovered while loading it is
@@ -640,6 +733,7 @@ int main(int argc, char *argv[])
                                        &linked_module_count, &requirements))
                 error_fatal("Cannot load Python descriptor builtins");
         }
+        free(linked_modules);
     }
 
     if (verbose) {
@@ -933,6 +1027,15 @@ int main(int argc, char *argv[])
     }
     codegen->set_verbose(verbose);
     if (stdlib_reg) codegen->set_stdlib(stdlib_reg);
+    if (split_count > 1) {
+        if (target != TARGET_386) {
+            fprintf(stderr,
+                    "--split is only supported for the 386 target\n");
+            delete codegen;
+            return 1;
+        }
+        codegen->set_split(split_count);
+    }
 
     if (!codegen->generate(ir_mod, output_file)) {
         fprintf(stderr, "Code generation failed\n");

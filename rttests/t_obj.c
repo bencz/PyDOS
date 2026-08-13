@@ -8,6 +8,7 @@
 
 #include "testfw.h"
 #include "../runtime/pdos_obj.h"
+#include "../runtime/pdos_ops.h"
 #include "../runtime/pdos_exc.h"
 #include "../runtime/pdos_lst.h"
 #include "../runtime/pdos_dic.h"
@@ -399,6 +400,10 @@ TEST(getitem_dict_missing)
     key = mkstr("z", 1);
     val = pydos_obj_getitem(d, key);
     ASSERT_NULL(val);
+    /* A missing key raises KeyError; assert and consume it. */
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code, PYDOS_EXC_KEY_ERROR);
+    pydos_exc_clear();
     PYDOS_DECREF(key);
     PYDOS_DECREF(d);
 }
@@ -458,6 +463,10 @@ TEST(delitem_dict)
     ASSERT_EQ(pydos_dict_len(d), 0L);
     got = pydos_obj_getitem(d, key);
     ASSERT_NULL(got);
+    /* The deleted key is now missing: KeyError; assert and consume it. */
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code, PYDOS_EXC_KEY_ERROR);
+    pydos_exc_clear();
     PYDOS_DECREF(key);
     PYDOS_DECREF(d);
 }
@@ -769,6 +778,161 @@ TEST(obj_mul_ints)
     PYDOS_DECREF(r);
     PYDOS_DECREF(a);
     PYDOS_DECREF(b);
+}
+
+/* ------------------------------------------------------------------ */
+/* obj_bitand / obj_lshift: polymorphic bitwise dispatch               */
+/* ------------------------------------------------------------------ */
+
+static PyDosObj far * PYDOS_API bitwise_and_impl(PyDosObj far *self,
+                                                 PyDosObj far *other)
+{
+    (void)self; (void)other;
+    return pydos_obj_new_int(111L);
+}
+
+static PyDosObj far * PYDOS_API bitwise_rand_impl(PyDosObj far *self,
+                                                  PyDosObj far *other)
+{
+    (void)self; (void)other;
+    return pydos_obj_new_int(222L);
+}
+
+static PyDosObj far * PYDOS_API bitwise_lshift_impl(PyDosObj far *self,
+                                                    PyDosObj far *other)
+{
+    (void)self; (void)other;
+    return pydos_obj_new_int(333L);
+}
+
+static PyDosObj far *make_bitwise_instance(PyDosVTable far *vt)
+{
+    PyDosObj far *inst = pydos_obj_alloc_type(PYDT_INSTANCE);
+    if (inst == (PyDosObj far *)0) return inst;
+    inst->v.instance.attrs = (PyDosObj far *)0;
+    inst->v.instance.vtable = vt;
+    inst->v.instance.cls = (PyDosObj far *)0;
+    return inst;
+}
+
+TEST(obj_bitand_ints)
+{
+    PyDosObj far *a = pydos_obj_new_int(6L);
+    PyDosObj far *b = pydos_obj_new_int(3L);
+    PyDosObj far *r = pydos_obj_bitand(a, b);
+    ASSERT_NOT_NULL(r);
+    ASSERT_EQ(r->type, PYDT_INT);
+    ASSERT_EQ(r->v.int_val, 2L);
+    PYDOS_DECREF(r);
+    PYDOS_DECREF(a);
+    PYDOS_DECREF(b);
+}
+
+TEST(obj_bitand_instance)
+{
+    PyDosVTable far *vt = pydos_vtable_create();
+    PyDosObj far *inst;
+    PyDosObj far *b = pydos_obj_new_int(1L);
+    PyDosObj far *r;
+
+    ASSERT_NOT_NULL(vt);
+    pydos_vtable_add_method(vt, (const char far *)"__and__",
+                            (void (far *)(void))bitwise_and_impl);
+    inst = make_bitwise_instance(vt);
+    ASSERT_NOT_NULL(inst);
+
+    r = pydos_obj_bitand(inst, b);
+    ASSERT_NOT_NULL(r);
+    ASSERT_EQ(r->v.int_val, 111L);
+
+    PYDOS_DECREF(r);
+    PYDOS_DECREF(b);
+    PYDOS_DECREF(inst);
+    pydos_vtable_destroy(vt);
+}
+
+TEST(obj_bitand_reflected)
+{
+    PyDosVTable far *vt = pydos_vtable_create();
+    PyDosObj far *inst;
+    PyDosObj far *a = pydos_obj_new_int(1L);
+    PyDosObj far *r;
+
+    ASSERT_NOT_NULL(vt);
+    pydos_vtable_add_method(vt, (const char far *)"__rand__",
+                            (void (far *)(void))bitwise_rand_impl);
+    inst = make_bitwise_instance(vt);
+    ASSERT_NOT_NULL(inst);
+
+    /* int & instance -> instance.__rand__(int) */
+    r = pydos_obj_bitand(a, inst);
+    ASSERT_NOT_NULL(r);
+    ASSERT_EQ(r->v.int_val, 222L);
+
+    PYDOS_DECREF(r);
+    PYDOS_DECREF(a);
+    PYDOS_DECREF(inst);
+    pydos_vtable_destroy(vt);
+}
+
+TEST(obj_lshift_instance)
+{
+    PyDosVTable far *vt = pydos_vtable_create();
+    PyDosObj far *inst;
+    PyDosObj far *b = pydos_obj_new_int(2L);
+    PyDosObj far *r;
+
+    ASSERT_NOT_NULL(vt);
+    pydos_vtable_add_method(vt, (const char far *)"__lshift__",
+                            (void (far *)(void))bitwise_lshift_impl);
+    inst = make_bitwise_instance(vt);
+    ASSERT_NOT_NULL(inst);
+
+    r = pydos_obj_lshift(inst, b);
+    ASSERT_NOT_NULL(r);
+    ASSERT_EQ(r->v.int_val, 333L);
+
+    PYDOS_DECREF(r);
+    PYDOS_DECREF(b);
+    PYDOS_DECREF(inst);
+    pydos_vtable_destroy(vt);
+}
+
+TEST(obj_bitand_unsupported)
+{
+    PyDosObj far *a = pydos_obj_new_str((const char far *)"x", 1);
+    PyDosObj far *b = pydos_obj_new_str((const char far *)"y", 1);
+    PyDosObj far *r = pydos_obj_bitand(a, b);
+    ASSERT_NULL(r);
+    ASSERT_TRUE(pydos_exc_pending());
+    ASSERT_EQ(pydos_exc_current()->v.exc.type_code, PYDOS_EXC_TYPE_ERROR);
+    pydos_exc_clear();
+    PYDOS_DECREF(a);
+    PYDOS_DECREF(b);
+}
+
+TEST(obj_inplace_bitand_fallback)
+{
+    PyDosVTable far *vt = pydos_vtable_create();
+    PyDosObj far *inst;
+    PyDosObj far *b = pydos_obj_new_int(1L);
+    PyDosObj far *r;
+
+    ASSERT_NOT_NULL(vt);
+    /* No __iand__: a &= b must fall back to __and__ */
+    pydos_vtable_add_method(vt, (const char far *)"__and__",
+                            (void (far *)(void))bitwise_and_impl);
+    inst = make_bitwise_instance(vt);
+    ASSERT_NOT_NULL(inst);
+
+    r = pydos_obj_inplace(inst, b, 7);
+    ASSERT_NOT_NULL(r);
+    ASSERT_EQ(r->v.int_val, 111L);
+
+    PYDOS_DECREF(r);
+    PYDOS_DECREF(b);
+    PYDOS_DECREF(inst);
+    pydos_vtable_destroy(vt);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1451,6 +1615,12 @@ void run_obj_tests(void)
     RUN(obj_add_strs);
     RUN(obj_sub_ints);
     RUN(obj_mul_ints);
+    RUN(obj_bitand_ints);
+    RUN(obj_bitand_instance);
+    RUN(obj_bitand_reflected);
+    RUN(obj_lshift_instance);
+    RUN(obj_bitand_unsupported);
+    RUN(obj_inplace_bitand_fallback);
     RUN(call_method_list_insert);
     RUN(call_method_list_reverse);
     RUN(obj_add_floats);
